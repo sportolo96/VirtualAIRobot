@@ -24,6 +24,8 @@ Egy API-first, queue alapú AI/OS automatizációs rendszer készítése, ahol m
 
 ### F2 - AI/OS iteratív végrehajtási ciklus
 - Step loop: pre-capture -> plan -> execute -> post-capture -> evaluate
+- LangChain best practice orchestration: planner/evaluator prompt template + LCEL pipeline
+- Strukturált, validált LLM kimenet (decision/evaluation DTO)
 - Engedélyezett action készlet és guardrail-ek
 - `max_steps`, `time_budget_sec`, `max_retries_per_step` korlátok
 
