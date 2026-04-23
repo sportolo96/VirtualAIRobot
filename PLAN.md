@@ -17,6 +17,7 @@ Egy API-first, queue alapú AI/OS automatizációs rendszer készítése, ahol m
 ### F0 - Projekt alap és konténer runtime
 - Python projekt váz (DDD + CQRS rétegek)
 - Dockerfile + docker-compose (api, worker, redis) kötelezően használatban
+- Flask API + RQ worker + Redis queue/state baseline implementáció
 - Környezeti kapcsolók (runtime mód, limits, AI provider, artifact storage)
 
 ### F1 - Run lifecycle és queue

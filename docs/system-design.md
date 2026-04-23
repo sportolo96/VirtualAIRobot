@@ -14,9 +14,9 @@ Kiemelt követelmények:
 ## 2. Architektúra
 
 ### 2.1 Komponensek
-- API Service
-- Queue (Redis)
-- Worker Service
+- API Service (Flask)
+- Queue (Redis + RQ)
+- Worker Service (RQ worker)
 - Browser/OS Adapter réteg
 - AI Planner/Evaluator orchestration (LangChain)
 - Artifact Store (filesystem/object storage)
@@ -33,6 +33,13 @@ Kiemelt követelmények:
 - A model kimenet minden esetben strukturált, validált DTO (például `PlannerDecision`, `StepEvaluation`).
 - Retry, timeout, fallback és tracing az `infrastructure` rétegben történik.
 - Domain üzleti szabály nem kerül promptba; a döntési guardok a `domain` és `application` rétegben maradnak.
+
+### 2.4 Első implementációs baseline
+- Queue producer: `POST /v1/runs` enqueue RQ queue-ra.
+- Worker job: `src.interfaces.worker.jobs.process_run_job`.
+- Run és step state Redis-ben tárolódik repository rétegen keresztül.
+- Screenshot adapter jelenleg filesystem alapú baseline artifactot készít (`.png`).
+- Planner/Evaluator jelenleg LangChain template + pipeline stub modellel fut a későbbi provider integrációig.
 
 ## 3. Run Lifecycle
 
