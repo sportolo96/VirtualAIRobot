@@ -9,6 +9,7 @@ Kiemelt követelmények:
 - Actionönként screenshot + AI kiértékelés
 - Paraméterezhető cél/URL/sikerfeltétel
 - Részletes futási eredmény és értékelés visszaadása
+- Kötelező Docker alapú konténeres futtatás
 
 ## 2. Architektúra
 
@@ -139,6 +140,7 @@ A loop addig fut, amíg:
 ## 7. Deployment and Runtime Config
 
 ### 7.1 Konténeres futtatás
+- Kötelező deployment forma: Docker Compose alapú konténeres stack.
 - Alap mód: `container_desktop` (Linux Xvfb/noVNC desktop a konténeren belül)
 - API + Worker + Redis külön service
 - Artifact volume mount kötelező
