@@ -9,6 +9,7 @@ Kiemelt követelmények:
 - Actionönként screenshot + AI kiértékelés
 - Paraméterezhető cél/URL/sikerfeltétel
 - Részletes futási eredmény és értékelés visszaadása
+- Kötelező Docker alapú konténeres futtatás
 
 ## 2. Architektúra
 
@@ -17,7 +18,7 @@ Kiemelt követelmények:
 - Queue (Redis)
 - Worker Service
 - Browser/OS Adapter réteg
-- AI Planner/Evaluator kliens
+- AI Planner/Evaluator orchestration (LangChain)
 - Artifact Store (filesystem/object storage)
 
 ### 2.2 Rétegek (DDD + CQRS)
@@ -25,6 +26,13 @@ Kiemelt követelmények:
 - `src/application`: command/query use-case-ek
 - `src/infrastructure`: queue, AI, browser, OS adapterek
 - `src/interfaces`: HTTP API
+
+### 2.3 LLM orchestration (LangChain best practice)
+- A planner és evaluator külön prompt template-et használ, verziózott template fájlokkal.
+- A hívások LCEL pipeline-on futnak: input mapping -> prompt template -> model -> structured output parser.
+- A model kimenet minden esetben strukturált, validált DTO (például `PlannerDecision`, `StepEvaluation`).
+- Retry, timeout, fallback és tracing az `infrastructure` rétegben történik.
+- Domain üzleti szabály nem kerül promptba; a döntési guardok a `domain` és `application` rétegben maradnak.
 
 ## 3. Run Lifecycle
 
@@ -113,10 +121,10 @@ Kiemelt követelmények:
 ## 5. Execution Loop
 Minden step kötelező sorrendje:
 1. Pre-action screenshot capture
-2. AI planner döntés a következő actionről
+2. AI planner pipeline döntés a következő actionről (LangChain template + parser)
 3. Action végrehajtás OS inputtal
 4. Post-action screenshot capture
-5. AI evaluator értékelés (haladás/siker/hibakockázat)
+5. AI evaluator pipeline értékelés (LangChain template + parser)
 6. Guard ellenőrzés (budget, retry, tiltott action)
 
 A loop addig fut, amíg:
@@ -132,6 +140,7 @@ A loop addig fut, amíg:
 ## 7. Deployment and Runtime Config
 
 ### 7.1 Konténeres futtatás
+- Kötelező deployment forma: Docker Compose alapú konténeres stack.
 - Alap mód: `container_desktop` (Linux Xvfb/noVNC desktop a konténeren belül)
 - API + Worker + Redis külön service
 - Artifact volume mount kötelező

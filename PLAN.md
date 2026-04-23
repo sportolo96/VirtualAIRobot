@@ -8,13 +8,15 @@ Egy API-first, queue alapú AI/OS automatizációs rendszer készítése, ahol m
 - Aszinkron futás: `POST /v1/runs` csak enqueue, futás workerben történik.
 - Minden step előtt és után képernyőkép készül.
 - A következő action mindig az aktuális screenshot AI-kiértékeléséből születik.
-- Teljes konténerizáció, macOS és Linux hoston is futtatható módokkal.
+- Kötelező Docker alapú konténeres futtatás.
+- A rendszer szállítási célformátuma Docker Compose stack (`api`, `worker`, `redis`).
+- macOS és Linux hoston ugyanazzal a konténeres stackkel kell futnia.
 
 ## Fázisok
 
 ### F0 - Projekt alap és konténer runtime
 - Python projekt váz (DDD + CQRS rétegek)
-- Dockerfile + docker-compose (api, worker, redis)
+- Dockerfile + docker-compose (api, worker, redis) kötelezően használatban
 - Környezeti kapcsolók (runtime mód, limits, AI provider, artifact storage)
 
 ### F1 - Run lifecycle és queue
@@ -24,6 +26,8 @@ Egy API-first, queue alapú AI/OS automatizációs rendszer készítése, ahol m
 
 ### F2 - AI/OS iteratív végrehajtási ciklus
 - Step loop: pre-capture -> plan -> execute -> post-capture -> evaluate
+- LangChain best practice orchestration: planner/evaluator prompt template + LCEL pipeline
+- Strukturált, validált LLM kimenet (decision/evaluation DTO)
 - Engedélyezett action készlet és guardrail-ek
 - `max_steps`, `time_budget_sec`, `max_retries_per_step` korlátok
 
