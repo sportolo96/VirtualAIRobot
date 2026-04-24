@@ -23,9 +23,20 @@ Runtime outcome policy:
 docker compose up --build
 ```
 
-Create a run:
+## How to test and use
+1. Start the stack:
 ```bash
-curl -sS -X POST http://localhost:8000/v1/runs \
+docker compose up --build
+```
+
+2. Verify API health:
+```bash
+curl -sS http://localhost:8000/health
+```
+
+3. Create a run:
+```bash
+RUN_RESPONSE=$(curl -sS -X POST http://localhost:8000/v1/runs \
   -H 'Content-Type: application/json' \
   -d '{
     "goal":"Open profile page",
@@ -35,10 +46,28 @@ curl -sS -X POST http://localhost:8000/v1/runs \
     "limits":{"max_steps":5,"time_budget_sec":60,"max_retries_per_step":1},
     "allowed_actions":["move","click","scroll","type","key","wait","done","failed"],
     "llm":{"planner_model":"chatgpt-5.4","evaluator_model":"chatgpt-5.4"}
-  }'
+  }')
+echo "$RUN_RESPONSE"
+RUN_ID=$(echo "$RUN_RESPONSE" | python3 -c 'import json,sys; print(json.load(sys.stdin)["run_id"])')
+echo "$RUN_ID"
 ```
 
-Run tests:
+4. Poll run status:
 ```bash
-pytest
+curl -sS http://localhost:8000/v1/runs/$RUN_ID
+```
+
+5. Inspect step trace:
+```bash
+curl -sS http://localhost:8000/v1/runs/$RUN_ID/steps
+```
+
+6. Cancel a run manually if needed:
+```bash
+curl -sS -X POST http://localhost:8000/v1/runs/$RUN_ID/cancel
+```
+
+7. Run tests locally:
+```bash
+python3 -m pytest -q
 ```
