@@ -6,5 +6,9 @@ Step index: {step_index}
 Pre screenshot path: {pre_screenshot}
 Last evaluation: {last_evaluation}
 
+Terminal action policy:
+- If the task is completed, return action "done".
+- If continuation is not possible or task is impossible, return action "failed".
+
 Return only structured JSON with this schema:
 {format_instructions}

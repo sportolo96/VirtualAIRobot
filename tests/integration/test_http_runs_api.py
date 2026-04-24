@@ -68,10 +68,10 @@ def test_runs_api_baseline_flow() -> None:
             "time_budget_sec": 60,
             "max_retries_per_step": 1,
         },
-        "allowed_actions": ["move", "click", "scroll", "type", "key", "wait"],
+        "allowed_actions": ["move", "click", "scroll", "type", "key", "wait", "done", "failed"],
         "llm": {
-            "planner_model": "deterministic",
-            "evaluator_model": "deterministic",
+            "planner_model": "chatgpt-5.4",
+            "evaluator_model": "chatgpt-5.4",
         },
     }
 

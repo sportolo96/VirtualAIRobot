@@ -58,7 +58,9 @@ class PlannerPipeline(Planner):
         target: Optional[str] = None
         value: Optional[str] = None
 
-        if "click" in lowered:
+        if "terminal action policy" in lowered and ("step index: 2" in lowered or "step index: 3" in lowered):
+            action = "done"
+        elif "click" in lowered:
             action = "click"
             target = "primary"
         elif "type" in lowered:

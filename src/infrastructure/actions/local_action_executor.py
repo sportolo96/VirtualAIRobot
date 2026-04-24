@@ -13,7 +13,7 @@ class LocalActionExecutor(ActionExecutor):
         target = action.get("target")
         value = action.get("value")
 
-        if action_name not in {"move", "click", "scroll", "type", "key", "wait"}:
+        if action_name not in {"move", "click", "scroll", "type", "key", "wait", "done", "failed"}:
             raise ValueError(f"Unsupported action: {action_name}")
 
         return {

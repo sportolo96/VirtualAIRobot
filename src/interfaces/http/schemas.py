@@ -29,8 +29,8 @@ class LimitsSchema(BaseModel):
 class LlmSchema(BaseModel):
     """LLM schema."""
 
-    planner_model: str = "deterministic-planner"
-    evaluator_model: str = "deterministic-evaluator"
+    planner_model: str = "chatgpt-5.4"
+    evaluator_model: str = "chatgpt-5.4"
 
 
 class CreateRunRequestSchema(BaseModel):
@@ -41,5 +41,7 @@ class CreateRunRequestSchema(BaseModel):
     success_criteria: SuccessCriteriaSchema
     runtime: RuntimeSchema
     limits: LimitsSchema
-    allowed_actions: list[str] = Field(default_factory=lambda: ["move", "click", "scroll", "type", "key", "wait"])
+    allowed_actions: list[str] = Field(
+        default_factory=lambda: ["move", "click", "scroll", "type", "key", "wait", "done", "failed"]
+    )
     llm: LlmSchema = Field(default_factory=LlmSchema)

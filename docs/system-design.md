@@ -78,10 +78,10 @@ Kiemelt követelmények:
     "time_budget_sec": 300,
     "max_retries_per_step": 2
   },
-  "allowed_actions": ["move", "click", "scroll", "type", "key", "wait"],
+  "allowed_actions": ["move", "click", "scroll", "type", "key", "wait", "done", "failed"],
   "llm": {
-    "planner_model": "gpt-5.4",
-    "evaluator_model": "gpt-5.4"
+    "planner_model": "chatgpt-5.4",
+    "evaluator_model": "chatgpt-5.4"
   }
 }
 ```
@@ -135,7 +135,8 @@ Minden step kötelező sorrendje:
 6. Guard ellenőrzés (budget, retry, tiltott action)
 
 A loop addig fut, amíg:
-- a success_criteria teljesül, vagy
+- a planner action `done` (run sikeres), vagy
+- a planner action `failed` (run sikertelen), vagy
 - limit túllépés történik, vagy
 - manuális cancel érkezik.
 

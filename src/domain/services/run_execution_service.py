@@ -81,15 +81,17 @@ class RunExecutionService:
             )
 
             action_name = str(planner_decision.get("action", "wait"))
-            try:
-                self._safety_guard.handle(
-                    allowed_actions=run.allowed_actions,
-                    requested_action=action_name,
-                )
-            except Exception as exc:
-                run.mark_failed(now=now, reason=str(exc))
-                self._run_repository.save(run=run)
-                return
+            is_terminal_action = action_name in {"done", "failed"}
+            if not is_terminal_action:
+                try:
+                    self._safety_guard.handle(
+                        allowed_actions=run.allowed_actions,
+                        requested_action=action_name,
+                    )
+                except Exception as exc:
+                    run.mark_failed(now=now, reason=str(exc))
+                    self._run_repository.save(run=run)
+                    return
 
             action_result: dict[str, object] = {
                 "success": False,
@@ -97,22 +99,29 @@ class RunExecutionService:
             }
             final_error: str | None = None
 
-            for attempt in range(run.limits.max_retries_per_step + 1):
-                try:
-                    action_result = self._action_executor.handle(
-                        action=planner_decision,
-                        start_url=run.start_url,
-                    )
-                    action_result["attempt"] = attempt + 1
-                    final_error = None
-                    break
-                except Exception as exc:
-                    final_error = str(exc)
-                    action_result = {
-                        "success": False,
-                        "error": final_error,
-                        "attempt": attempt + 1,
-                    }
+            if is_terminal_action:
+                action_result = {
+                    "success": action_name == "done",
+                    "terminal_action": action_name,
+                    "attempt": 0,
+                }
+            else:
+                for attempt in range(run.limits.max_retries_per_step + 1):
+                    try:
+                        action_result = self._action_executor.handle(
+                            action=planner_decision,
+                            start_url=run.start_url,
+                        )
+                        action_result["attempt"] = attempt + 1
+                        final_error = None
+                        break
+                    except Exception as exc:
+                        final_error = str(exc)
+                        action_result = {
+                            "success": False,
+                            "error": final_error,
+                            "attempt": attempt + 1,
+                        }
 
             post_screenshot = self._capture_adapter.handle(
                 run_id=run.run_id.value,
@@ -148,13 +157,25 @@ class RunExecutionService:
                 last_evaluation=str(evaluation.get("progress", "")),
             )
 
-            if final_error is not None and not bool(action_result.get("success", False)):
-                run.mark_failed(now=now, reason=final_error)
+            if action_name == "done":
+                run.mark_succeeded(
+                    now=now,
+                    final_evaluation={**evaluation, "terminal_action": "done"},
+                )
                 self._run_repository.save(run=run)
                 return
 
-            if bool(evaluation.get("goal_achieved", False)):
-                run.mark_succeeded(now=now, final_evaluation=evaluation)
+            if action_name == "failed":
+                run.final_evaluation = {**evaluation, "terminal_action": "failed"}
+                run.mark_failed(
+                    now=now,
+                    reason=str(evaluation.get("reason", "AI requested terminal failure")),
+                )
+                self._run_repository.save(run=run)
+                return
+
+            if final_error is not None and not bool(action_result.get("success", False)):
+                run.mark_failed(now=now, reason=final_error)
                 self._run_repository.save(run=run)
                 return
 

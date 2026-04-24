@@ -6,5 +6,9 @@ Action: {action}
 Action result: {action_result}
 Post screenshot path: {post_screenshot}
 
+Terminal action semantics:
+- action "done" means run success
+- action "failed" means run failure
+
 Return only structured JSON with this schema:
 {format_instructions}
