@@ -1,0 +1,33 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  api:
+    build: .
+    command: python -m src.interfaces.http.server
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      QUEUE_NAME: runs
+      ARTIFACT_ROOT: /app/artifacts
+      FLASK_HOST: 0.0.0.0
+      FLASK_PORT: 8000
+    depends_on:
+      - redis
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./artifacts:/app/artifacts
+
+  worker:
+    build: .
+    command: python -m src.interfaces.worker.worker
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      QUEUE_NAME: runs
+      ARTIFACT_ROOT: /app/artifacts
+    depends_on:
+      - redis
+    volumes:
+      - ./artifacts:/app/artifacts

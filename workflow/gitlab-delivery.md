@@ -1,20 +1,23 @@
 # GitLab Delivery Workflow
 
 ## Scope
-GitHub repóból GitLab felé történő szállítás és CI/CD előkészítés.
+Delivery from GitHub repository to GitLab and CI/CD preparation.
 
-## Lépések
-1. Git távoli beállítás ellenőrzése (`origin`, opcionális `gitlab`).
-2. Branch stratégia rögzítése (main + feature branch-ek):
-   - Fejlesztői változtatás commit/push csak feature branch-re mehet.
-   - `main` branch-re közvetlen commit/push nem engedett.
-   - Ha nincs aktív feature branch, branch név javaslat után branch létrehozás/váltás kötelező.
-   - Ha a feladat befejeződött aktív feature branch-en, mehet a commit és push.
-3. CI pipeline fájl(ok) létrehozása (lint, test, build).
-4. Docker image build/publish lépések bekötése.
-5. Release checklist dokumentálása.
+## Steps
+1. Verify git remotes (`origin`, optional `gitlab`).
+2. Define branch strategy (main + feature branches):
+   - Development commits/pushes only from feature branches.
+   - Direct commit/push to `main` is not allowed.
+   - Before every commit and push, mandatory checks must pass using make commands:
+     - `make test`
+     - `make quality`
+   - If no active feature branch exists, propose a branch name then create/switch.
+   - If task is complete on active feature branch and mandatory checks pass, commit and push only after explicit user approval.
+3. Create CI pipeline file(s) (lint, test, build).
+4. Integrate Docker image build/publish steps.
+5. Document release checklist.
 
-## Kötelező Eredmény
-- Reprodukálható build és teszt futás CI-ben.
-- Verziózott, visszakövethető deploy útvonal.
-- Változáscsomagok feature branch alapú commit/push folyamattal szállítva.
+## Required Result
+- Reproducible build and test execution in CI.
+- Versioned and traceable deployment path.
+- Change sets delivered through feature-branch-based commit/push flow.

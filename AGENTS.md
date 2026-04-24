@@ -1,17 +1,17 @@
 # AGENTS
 
 ## Workflow Source
-- A projekt workflow szabályait a `workflow/*.md` fájlok adják.
-- Új feladatot mindig egy megfelelő workflow szerint kell végrehajtani.
+- Project workflow rules are defined in `workflow/*.md` files.
+- Every new task must follow the appropriate workflow.
 
-## Runtime Agentek
-- Planner Agent: a screenshot alapján javasolja a következő actiont a cél felé.
-- Evaluator Agent: action után ellenőrzi, hogy közeledett-e a futás a success feltételhez.
-- Safety Agent: action szűrés és guardrail ellenőrzés (tiltott action, budget túllépés, loop védelem).
+## Runtime Agents
+- Planner Agent: proposes the next action toward the goal based on screenshots.
+- Evaluator Agent: checks whether the latest action moved the run closer to success.
+- Safety Agent: enforces action filtering and guardrails (forbidden actions, budget limits, loop protection).
 
-## Dokumentációs Szabály
-- Minden viselkedés-, API-, queue-, workflow- vagy runtime változás esetén a kapcsolódó `docs/*.md` fájlokat ugyanabban a változtatásban frissíteni kell.
+## Documentation Rule
+- For every behavior, API, queue, workflow, or runtime change, update the related `docs/*.md` files in the same change.
 
-## Scope Szabály
-- A projekt API-first: futási konfiguráció csak API-ból érkezik.
-- Scenario `.md` input nem része a rendszernek.
+## Scope Rule
+- The project is API-first: runtime configuration must come only from API requests.
+- Scenario `.md` input is not part of the system.

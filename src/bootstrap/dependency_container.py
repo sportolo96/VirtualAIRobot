@@ -1,0 +1,78 @@
+from __future__ import annotations
+
+from redis import Redis
+
+from src.application.handlers.cancel_run_handler import CancelRunHandler
+from src.application.handlers.create_run_handler import CreateRunHandler
+from src.application.handlers.get_run_status_handler import GetRunStatusHandler
+from src.application.handlers.list_run_steps_handler import ListRunStepsHandler
+from src.application.handlers.process_run_handler import ProcessRunHandler
+from src.domain.services.run_execution_service import RunExecutionService
+from src.infrastructure.actions.local_action_executor import LocalActionExecutor
+from src.infrastructure.ai.pipelines.evaluator_pipeline import EvaluatorPipeline
+from src.infrastructure.ai.pipelines.planner_pipeline import PlannerPipeline
+from src.infrastructure.capture.filesystem_capture_adapter import FilesystemCaptureAdapter
+from src.infrastructure.config.settings import Settings
+from src.infrastructure.queue.rq_queue_client import RqQueueClient
+from src.infrastructure.repositories.redis_run_repository import RedisRunRepository
+from src.infrastructure.repositories.redis_step_repository import RedisStepRepository
+from src.infrastructure.safety.default_safety_guard import DefaultSafetyGuard
+from src.infrastructure.transformers.run_transformer import RunTransformer
+from src.infrastructure.transformers.step_transformer import StepTransformer
+
+
+class DependencyContainer:
+    """Application dependency container."""
+
+    def __init__(self, settings: Settings) -> None:
+        self._settings = settings
+        self._redis_client = Redis.from_url(settings.redis_url)
+        self._run_repository = RedisRunRepository(
+            redis_client=self._redis_client,
+            transformer=RunTransformer(),
+        )
+        self._step_repository = RedisStepRepository(
+            redis_client=self._redis_client,
+            transformer=StepTransformer(),
+        )
+        self._queue_client = RqQueueClient(
+            redis_client=self._redis_client,
+            queue_name=settings.queue_name,
+            job_path="src.interfaces.worker.jobs.process_run_job",
+        )
+        self._planner = PlannerPipeline(template_path=settings.planner_template_path)
+        self._evaluator = EvaluatorPipeline(template_path=settings.evaluator_template_path)
+        self._capture_adapter = FilesystemCaptureAdapter(artifact_root=settings.artifact_root)
+        self._action_executor = LocalActionExecutor()
+        self._safety_guard = DefaultSafetyGuard()
+
+    def create_create_run_handler(self) -> CreateRunHandler:
+        return CreateRunHandler(
+            run_repository=self._run_repository,
+            queue_client=self._queue_client,
+        )
+
+    def create_get_run_status_handler(self) -> GetRunStatusHandler:
+        return GetRunStatusHandler(run_repository=self._run_repository)
+
+    def create_list_run_steps_handler(self) -> ListRunStepsHandler:
+        return ListRunStepsHandler(step_repository=self._step_repository)
+
+    def create_cancel_run_handler(self) -> CancelRunHandler:
+        return CancelRunHandler(run_repository=self._run_repository)
+
+    def create_process_run_handler(self) -> ProcessRunHandler:
+        execution_service = RunExecutionService(
+            run_repository=self._run_repository,
+            step_repository=self._step_repository,
+            planner=self._planner,
+            evaluator=self._evaluator,
+            capture_adapter=self._capture_adapter,
+            action_executor=self._action_executor,
+            safety_guard=self._safety_guard,
+        )
+        return ProcessRunHandler(run_execution_service=execution_service)
+
+    @property
+    def redis_client(self) -> Redis:
+        return self._redis_client
