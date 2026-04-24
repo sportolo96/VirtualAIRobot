@@ -11,6 +11,9 @@ class Settings:
 
     redis_url: str
     queue_name: str
+    ai_provider: str
+    ai_model: str
+    openai_api_key: str
     artifact_root: Path
     planner_template_path: Path
     evaluator_template_path: Path
@@ -21,10 +24,13 @@ class Settings:
 def load_settings() -> Settings:
     """Load settings from environment."""
 
-    project_root = Path(__file__).resolve().parents[4]
+    project_root = Path(__file__).resolve().parents[3]
     return Settings(
         redis_url=os.getenv("REDIS_URL", "redis://redis:6379/0"),
         queue_name=os.getenv("QUEUE_NAME", "runs"),
+        ai_provider=os.getenv("AI_PROVIDER", "openai"),
+        ai_model=os.getenv("AI_MODEL", "gpt-5.4"),
+        openai_api_key=os.getenv("OPENAI_API_KEY", ""),
         artifact_root=Path(os.getenv("ARTIFACT_ROOT", str(project_root / "artifacts"))),
         planner_template_path=Path(
             os.getenv(

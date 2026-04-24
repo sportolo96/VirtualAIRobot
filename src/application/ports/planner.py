@@ -16,5 +16,6 @@ class Planner(ABC):
         step_index: int,
         pre_screenshot: str,
         last_evaluation: str | None,
+        model: str | None = None,
     ) -> dict[str, Any]:
         raise NotImplementedError

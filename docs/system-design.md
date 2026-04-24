@@ -38,8 +38,12 @@ Key requirements:
 - Queue producer: `POST /v1/runs` enqueues to RQ.
 - Worker job: `src.interfaces.worker.jobs.process_run_job`.
 - Run and step state are persisted in Redis via repository layer.
-- Screenshot adapter currently writes filesystem baseline artifacts (`.png`).
-- Planner/Evaluator currently run with LangChain template + pipeline stubs until provider integration is finalized.
+- Screenshot adapter captures real OS-level desktop screenshots into filesystem artifacts (`.png`) on each step.
+- Desktop session and browser window size are initialized from run `runtime.viewport`.
+- Screenshot output is normalized to the run viewport and includes cursor overlay markers.
+- Planner/Evaluator run through LangChain template + parser pipelines with live OpenAI Responses API calls.
+- Planner/Evaluator receive the same step screenshot image as OpenAI image input.
+- Action execution uses OS-level input events via `xdotool` for supported non-terminal actions.
 
 ## 3. Run Lifecycle
 
@@ -56,6 +60,10 @@ Key requirements:
 - `GET /v1/runs/{run_id}`
 - `GET /v1/runs/{run_id}/steps`
 - `POST /v1/runs/{run_id}/cancel`
+
+Run create precondition:
+- `POST /v1/runs` requires configured AI runtime (`AI_PROVIDER=openai` and `OPENAI_API_KEY`).
+- If AI runtime is missing or live connectivity check fails, API returns `503` and does not enqueue the run.
 
 ## 4. API Contract
 
@@ -80,8 +88,8 @@ Key requirements:
   },
   "allowed_actions": ["move", "click", "scroll", "type", "key", "wait", "done", "failed"],
   "llm": {
-    "planner_model": "chatgpt-5.4",
-    "evaluator_model": "chatgpt-5.4"
+    "planner_model": "gpt-5.4",
+    "evaluator_model": "gpt-5.4"
   }
 }
 ```
@@ -125,13 +133,20 @@ Key requirements:
 }
 ```
 
+### 4.4 Run Create Runtime Error (response)
+```json
+{
+  "error": "AI runtime is not configured. Set OPENAI_API_KEY to start runs."
+}
+```
+
 ## 5. Execution Loop
 Mandatory step order:
 1. Pre-action screenshot capture
-2. AI planner pipeline decision (LangChain template + parser)
+2. AI planner pipeline decision (LangChain template + parser + screenshot image input)
 3. Action execution through OS input layer
 4. Post-action screenshot capture
-5. AI evaluator pipeline evaluation (LangChain template + parser)
+5. AI evaluator pipeline evaluation (LangChain template + parser + screenshot image input)
 6. Guard checks (budget, retry, forbidden actions)
 
 The loop ends when:
@@ -152,6 +167,8 @@ The loop ends when:
 - Base mode: `container_desktop` (Linux Xvfb/noVNC desktop inside container).
 - API + Worker + Redis as separate services.
 - Artifact volume mount is required.
+- Redis is internal to the Compose network; host port publishing is not required.
+- Project make targets invoke Compose with explicit env file: `docker compose --env-file .env`.
 
 ### 7.2 Cross-Platform Principle
 - Linux host: native container desktop mode.
@@ -161,7 +178,8 @@ The loop ends when:
 ### 7.3 Main Runtime Keys (plan)
 - `RUNTIME_MODE`
 - `QUEUE_BACKEND`
-- `AI_PROVIDER`, `AI_MODEL`
+- `AI_PROVIDER`, `AI_MODEL`, `OPENAI_API_KEY`
+- `DEFAULT_VIEWPORT_WIDTH`, `DEFAULT_VIEWPORT_HEIGHT`
 - `MAX_STEPS_DEFAULT`, `TIME_BUDGET_DEFAULT_SEC`
 - `ARTIFACT_RETENTION_DAYS`
 

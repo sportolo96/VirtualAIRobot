@@ -44,6 +44,13 @@ def create_runs_blueprint(container: RunsContainer) -> Blueprint:
 
     @blueprint.post("/v1/runs")
     def create_run() -> tuple[Response, int]:
+        ai_runtime_check = getattr(container, "assert_ai_runtime_ready", None)
+        if callable(ai_runtime_check):
+            try:
+                ai_runtime_check()
+            except RuntimeError as exc:
+                return jsonify({"error": str(exc)}), 503
+
         payload = request.get_json(silent=True) or {}
         try:
             data = CreateRunRequestSchema.model_validate(payload)

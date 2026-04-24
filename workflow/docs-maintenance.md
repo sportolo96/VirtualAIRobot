@@ -6,6 +6,9 @@ Any code or structural change in the VirtualAIRobot project.
 ## Mandatory Rule
 - A functional change is complete only with documentation updates.
 - For behavior changes, `README.md` updates are also mandatory.
+- If new environment keys are added, both `.env` and `.env.example` must be updated.
+- `.env.example` must never contain real secrets.
+- `deficiencies.md` must be reviewed and updated to the current status in the same change set.
 
 ## What to Update
 - API contract change: `docs/system-design.md` API section.

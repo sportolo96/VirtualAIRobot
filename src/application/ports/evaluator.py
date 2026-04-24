@@ -16,5 +16,6 @@ class Evaluator(ABC):
         action: dict[str, Any],
         action_result: dict[str, Any],
         post_screenshot: str,
+        model: str | None = None,
     ) -> dict[str, Any]:
         raise NotImplementedError

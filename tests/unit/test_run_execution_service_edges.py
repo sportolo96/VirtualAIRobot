@@ -27,8 +27,10 @@ class PlannerSequence(Planner):
         step_index: int,
         pre_screenshot: str,
         last_evaluation: str | None,
+        model: str | None = None,
     ) -> dict[str, Any]:
         index = min(step_index - 1, len(self._actions) - 1)
+        _ = model
         return {"action": self._actions[index], "target": None, "value": None, "reason": "stub"}
 
 
@@ -43,7 +45,9 @@ class EvaluatorNeutral(Evaluator):
         action: dict[str, Any],
         action_result: dict[str, Any],
         post_screenshot: str,
+        model: str | None = None,
     ) -> dict[str, Any]:
+        _ = model
         return {
             "progress": "ongoing",
             "goal_achieved": False,
@@ -59,13 +63,25 @@ class CaptureNeutral(CaptureAdapter):
         return f"/tmp/{run_id}_{step_index}_{phase}.png"
 
 
+class CapturePrepareFail(CaptureAdapter):
+    """Capture adapter failing on runtime preparation."""
+
+    def prepare_run(self, run_id: str, runtime: dict[str, Any], start_url: str) -> None:
+        _ = (run_id, runtime, start_url)
+        raise RuntimeError("desktop-init-failed")
+
+    def handle(self, run_id: str, step_index: int, phase: str) -> str:
+        return f"/tmp/{run_id}_{step_index}_{phase}.png"
+
+
 class ActionExecutorAlwaysFail(ActionExecutor):
     """Action executor that always fails."""
 
     def __init__(self) -> None:
         self.calls = 0
 
-    def handle(self, action: dict[str, Any], start_url: str) -> dict[str, Any]:
+    def handle(self, action: dict[str, Any], start_url: str, runtime: dict[str, Any]) -> dict[str, Any]:
+        _ = (action, start_url, runtime)
         self.calls += 1
         raise RuntimeError("exec failed")
 
@@ -73,7 +89,8 @@ class ActionExecutorAlwaysFail(ActionExecutor):
 class ActionExecutorAlwaysSuccess(ActionExecutor):
     """Action executor that always succeeds."""
 
-    def handle(self, action: dict[str, Any], start_url: str) -> dict[str, Any]:
+    def handle(self, action: dict[str, Any], start_url: str, runtime: dict[str, Any]) -> dict[str, Any]:
+        _ = runtime
         return {"success": True, "action": action["action"], "url": start_url}
 
 
@@ -214,3 +231,28 @@ def test_run_execution_service_marks_failed_on_max_steps(run_factory) -> None:
     assert processed.status.value == "failed"
     assert processed.error == "Maximum steps reached"
     assert len(step_repository.list_by_run_id(run_id=run.run_id)) == 2
+
+
+def test_run_execution_service_marks_failed_when_capture_prepare_fails(run_factory) -> None:
+    run_repository = InMemoryRunRepository()
+    step_repository = InMemoryStepRepository()
+    run = run_factory()
+    run_repository.save(run=run)
+
+    service = RunExecutionService(
+        run_repository=run_repository,
+        step_repository=step_repository,
+        planner=PlannerSequence(actions=["wait"]),
+        evaluator=EvaluatorNeutral(),
+        capture_adapter=CapturePrepareFail(),
+        action_executor=ActionExecutorAlwaysSuccess(),
+        safety_guard=SafetyGuardAllowAll(),
+    )
+
+    service.handle(run_id=run.run_id.value)
+
+    processed = run_repository.get(run_id=run.run_id)
+    assert processed is not None
+    assert processed.status.value == "failed"
+    assert processed.error == "desktop-init-failed"
+    assert len(step_repository.list_by_run_id(run_id=run.run_id)) == 0

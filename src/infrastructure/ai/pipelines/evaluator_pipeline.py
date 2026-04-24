@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.prompts import PromptTemplate
@@ -10,6 +10,7 @@ from langchain_core.runnables import RunnableLambda
 from pydantic import BaseModel, Field
 
 from src.application.ports.evaluator import Evaluator
+from src.infrastructure.ai.providers.openai_responses_client import OpenAIResponsesClient
 
 
 class StepEvaluation(BaseModel):
@@ -24,11 +25,19 @@ class StepEvaluation(BaseModel):
 class EvaluatorPipeline(Evaluator):
     """LangChain template and pipeline based evaluator."""
 
-    def __init__(self, template_path: Path) -> None:
+    def __init__(
+        self,
+        template_path: Path,
+        openai_client: OpenAIResponsesClient,
+        default_model: str,
+        model_invoke: Callable[[str, str], str] | None = None,
+    ) -> None:
         template = template_path.read_text(encoding="utf-8")
+        self._openai_client = openai_client
+        self._default_model = default_model
+        self._model_invoke = model_invoke
         self._parser = PydanticOutputParser(pydantic_object=StepEvaluation)
         self._prompt = PromptTemplate.from_template(template=template)
-        self._chain = self._prompt | RunnableLambda(self._model_stub) | self._parser
 
     def handle(
         self,
@@ -38,7 +47,20 @@ class EvaluatorPipeline(Evaluator):
         action: dict[str, Any],
         action_result: dict[str, Any],
         post_screenshot: str,
+        model: str | None = None,
     ) -> dict[str, Any]:
+        model_name = (model or self._default_model).strip()
+        chain = (
+            self._prompt
+            | RunnableLambda(
+                lambda prompt_value: self._invoke_model(
+                    prompt_value=prompt_value,
+                    model_name=model_name,
+                    screenshot_path=post_screenshot,
+                )
+            )
+            | self._parser
+        )
         payload = {
             "goal": goal,
             "success_criteria": json.dumps(success_criteria),
@@ -48,32 +70,17 @@ class EvaluatorPipeline(Evaluator):
             "post_screenshot": post_screenshot,
             "format_instructions": self._parser.get_format_instructions(),
         }
-        evaluation = self._chain.invoke(payload)
+        evaluation = chain.invoke(payload)
         return evaluation.model_dump()
 
-    def _model_stub(self, prompt_value: Any) -> str:
+    def _invoke_model(self, prompt_value: Any, model_name: str, screenshot_path: str) -> str:
         prompt_text = (
             prompt_value.to_string() if hasattr(prompt_value, "to_string") else str(prompt_value)
         )
-        lowered = prompt_text.lower()
-        goal_achieved = '"action": "done"' in lowered
-        risk = "low"
-        reason = "Success criteria likely unmet"
-        progress = "Goal not reached yet"
-
-        if '"action": "failed"' in lowered:
-            risk = "high"
-            reason = "AI requested terminal failure"
-            progress = "Run failed by AI decision"
-        elif goal_achieved:
-            reason = "Success criteria likely satisfied"
-            progress = "Run completed by AI decision"
-
-        return json.dumps(
-            {
-                "progress": progress,
-                "goal_achieved": goal_achieved,
-                "risk": risk,
-                "reason": reason,
-            }
+        if self._model_invoke is not None:
+            return self._model_invoke(prompt_text, model_name)
+        return self._openai_client.complete_text_with_image(
+            model=model_name,
+            prompt=prompt_text,
+            image_path=screenshot_path,
         )

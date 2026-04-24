@@ -5,6 +5,7 @@ Step index: {step_index}
 Action: {action}
 Action result: {action_result}
 Post screenshot path: {post_screenshot}
+An image attachment of the post-action screenshot is provided with this prompt.
 
 Terminal action semantics:
 - action "done" means run success
