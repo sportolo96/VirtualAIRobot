@@ -12,7 +12,7 @@ from src.domain.value_objects.run_limits import RunLimits
 
 @pytest.fixture(autouse=True)
 def block_network_access(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Disable outbound network access for every test."""
+    """Disable outbound network access and real AI calls for every test."""
 
     def _blocked_connect(self: socket.socket, *args: Any, **kwargs: Any) -> None:
         raise RuntimeError("Network access is disabled in tests")
@@ -20,7 +20,11 @@ def block_network_access(monkeypatch: pytest.MonkeyPatch) -> None:
     def _blocked_create_connection(*args: Any, **kwargs: Any) -> None:
         raise RuntimeError("Network access is disabled in tests")
 
+    def _blocked_connect_ex(self: socket.socket, *args: Any, **kwargs: Any) -> int:
+        raise RuntimeError("Network access is disabled in tests")
+
     monkeypatch.setattr(socket.socket, "connect", _blocked_connect)
+    monkeypatch.setattr(socket.socket, "connect_ex", _blocked_connect_ex)
     monkeypatch.setattr(socket, "create_connection", _blocked_create_connection)
 
 
@@ -49,7 +53,7 @@ def run_factory() -> Callable[..., Run]:
                 ["move", "click", "scroll", "type", "key", "wait", "done", "failed"],
             ),
             llm=overrides.pop(
-                "llm", {"planner_model": "chatgpt-5.4", "evaluator_model": "chatgpt-5.4"}
+                "llm", {"planner_model": "gpt-5.4", "evaluator_model": "gpt-5.4"}
             ),
             now=now,
         )

@@ -8,5 +8,10 @@ class ActionExecutor(ABC):
     """Action execution contract."""
 
     @abstractmethod
-    def handle(self, action: dict[str, Any], start_url: str) -> dict[str, Any]:
+    def handle(
+        self,
+        action: dict[str, Any],
+        start_url: str,
+        runtime: dict[str, Any],
+    ) -> dict[str, Any]:
         raise NotImplementedError

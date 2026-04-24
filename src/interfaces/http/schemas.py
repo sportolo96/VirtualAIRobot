@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 from pydantic import BaseModel, Field
 
 
@@ -15,7 +17,12 @@ class RuntimeSchema(BaseModel):
     """Runtime schema."""
 
     mode: str = "container_desktop"
-    viewport: dict[str, int] = Field(default_factory=lambda: {"width": 1080, "height": 1920})
+    viewport: dict[str, int] = Field(
+        default_factory=lambda: {
+            "width": int(os.getenv("DEFAULT_VIEWPORT_WIDTH", "1080")),
+            "height": int(os.getenv("DEFAULT_VIEWPORT_HEIGHT", "1920")),
+        }
+    )
 
 
 class LimitsSchema(BaseModel):
@@ -29,8 +36,8 @@ class LimitsSchema(BaseModel):
 class LlmSchema(BaseModel):
     """LLM schema."""
 
-    planner_model: str = "chatgpt-5.4"
-    evaluator_model: str = "chatgpt-5.4"
+    planner_model: str = "gpt-5.4"
+    evaluator_model: str = "gpt-5.4"
 
 
 class CreateRunRequestSchema(BaseModel):

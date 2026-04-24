@@ -5,10 +5,17 @@ Allowed actions: {allowed_actions}
 Step index: {step_index}
 Pre screenshot path: {pre_screenshot}
 Last evaluation: {last_evaluation}
+An image attachment of the current pre-action screenshot is provided with this prompt.
 
 Terminal action policy:
 - If the task is completed, return action "done".
 - If continuation is not possible or task is impossible, return action "failed".
+
+Action output policy:
+- If a cookie/consent/modal overlay blocks interaction, first choose an action that dismisses or accepts it.
+- For `move` and `click`, include numeric `x` and `y` coordinates in viewport space.
+- For `click`, you may include `button` (1 left, 2 middle, 3 right).
+- For `wait`, you may include `seconds`.
 
 Return only structured JSON with this schema:
 {format_instructions}

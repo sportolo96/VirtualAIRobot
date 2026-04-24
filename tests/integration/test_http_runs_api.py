@@ -49,6 +49,13 @@ class ApiContainerStub:
         return self._cancel_run_handler
 
 
+class ApiContainerMissingAIStub(ApiContainerStub):
+    """Test dependency container with missing AI runtime."""
+
+    def assert_ai_runtime_ready(self) -> None:
+        raise RuntimeError("AI runtime is not configured. Set OPENAI_API_KEY to start runs.")
+
+
 def _build_payload() -> dict:
     return {
         "goal": "Open profile page",
@@ -69,8 +76,8 @@ def _build_payload() -> dict:
         },
         "allowed_actions": ["move", "click", "scroll", "type", "key", "wait", "done", "failed"],
         "llm": {
-            "planner_model": "chatgpt-5.4",
-            "evaluator_model": "chatgpt-5.4",
+            "planner_model": "gpt-5.4",
+            "evaluator_model": "gpt-5.4",
         },
     }
 
@@ -137,3 +144,15 @@ def test_runs_api_cancel_flow() -> None:
 
     assert cancel_response.status_code == 202
     assert cancel_response.get_json()["status"] == "cancel_requested"
+
+
+def test_runs_api_returns_503_when_ai_runtime_is_not_ready() -> None:
+    app = create_app(container=ApiContainerMissingAIStub())
+    client = app.test_client()
+
+    response = client.post("/v1/runs", json=_build_payload())
+
+    assert response.status_code == 503
+    assert response.get_json()["error"] == (
+        "AI runtime is not configured. Set OPENAI_API_KEY to start runs."
+    )

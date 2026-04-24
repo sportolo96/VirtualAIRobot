@@ -10,6 +10,9 @@ from src.interfaces.worker import jobs
 class FakeSettings:
     redis_url: str = "redis://test:6379/0"
     queue_name: str = "runs"
+    ai_provider: str = "openai"
+    ai_model: str = "gpt-5.4"
+    openai_api_key: str = "test-key"
     artifact_root: Path = Path("/tmp/artifacts")
     planner_template_path: Path = Path("/tmp/planner.txt")
     evaluator_template_path: Path = Path("/tmp/evaluator.txt")

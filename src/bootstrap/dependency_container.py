@@ -11,6 +11,7 @@ from src.domain.services.run_execution_service import RunExecutionService
 from src.infrastructure.actions.local_action_executor import LocalActionExecutor
 from src.infrastructure.ai.pipelines.evaluator_pipeline import EvaluatorPipeline
 from src.infrastructure.ai.pipelines.planner_pipeline import PlannerPipeline
+from src.infrastructure.ai.providers.openai_responses_client import OpenAIResponsesClient
 from src.infrastructure.capture.filesystem_capture_adapter import FilesystemCaptureAdapter
 from src.infrastructure.config.settings import Settings
 from src.infrastructure.queue.rq_queue_client import RqQueueClient
@@ -40,11 +41,38 @@ class DependencyContainer:
             queue_name=settings.queue_name,
             job_path="src.interfaces.worker.jobs.process_run_job",
         )
-        self._planner = PlannerPipeline(template_path=settings.planner_template_path)
-        self._evaluator = EvaluatorPipeline(template_path=settings.evaluator_template_path)
+        self._openai_client = OpenAIResponsesClient(api_key=settings.openai_api_key)
+        self._planner = PlannerPipeline(
+            template_path=settings.planner_template_path,
+            openai_client=self._openai_client,
+            default_model=settings.ai_model,
+        )
+        self._evaluator = EvaluatorPipeline(
+            template_path=settings.evaluator_template_path,
+            openai_client=self._openai_client,
+            default_model=settings.ai_model,
+        )
         self._capture_adapter = FilesystemCaptureAdapter(artifact_root=settings.artifact_root)
         self._action_executor = LocalActionExecutor()
         self._safety_guard = DefaultSafetyGuard()
+
+    def assert_ai_runtime_ready(self) -> None:
+        """Ensure AI runtime prerequisites are configured before enqueueing runs."""
+
+        provider = self._settings.ai_provider.strip().lower()
+        if provider != "openai":
+            raise RuntimeError(f"AI provider '{self._settings.ai_provider}' is not supported")
+
+        api_key = self._settings.openai_api_key.strip()
+        if not api_key or api_key == "your_real_key_here":
+            raise RuntimeError(
+                "AI runtime is not configured. Set OPENAI_API_KEY to start runs."
+            )
+
+        try:
+            self._openai_client.health_check(model=self._settings.ai_model)
+        except Exception as exc:
+            raise RuntimeError(f"AI runtime connectivity check failed: {exc}") from exc
 
     def create_create_run_handler(self) -> CreateRunHandler:
         return CreateRunHandler(

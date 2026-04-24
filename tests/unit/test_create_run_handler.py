@@ -32,7 +32,7 @@ def test_create_run_handler_saves_and_enqueues() -> None:
         runtime={"mode": "container_desktop", "viewport": {"width": 1080, "height": 1920}},
         limits={"max_steps": 5, "time_budget_sec": 60, "max_retries_per_step": 1},
         allowed_actions=["move", "click", "scroll", "type", "key", "wait", "done", "failed"],
-        llm={"planner_model": "chatgpt-5.4", "evaluator_model": "chatgpt-5.4"},
+        llm={"planner_model": "gpt-5.4", "evaluator_model": "gpt-5.4"},
     )
 
     run = handler.handle(command=command)

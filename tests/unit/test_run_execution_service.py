@@ -29,8 +29,10 @@ class PlannerStub(Planner):
         step_index: int,
         pre_screenshot: str,
         last_evaluation: str | None,
+        model: str | None = None,
     ) -> dict[str, Any]:
         index = min(step_index - 1, len(self._actions) - 1)
+        _ = model
         return {"action": self._actions[index], "target": None, "value": None, "reason": "stub"}
 
 
@@ -45,7 +47,9 @@ class EvaluatorStub(Evaluator):
         action: dict[str, Any],
         action_result: dict[str, Any],
         post_screenshot: str,
+        model: str | None = None,
     ) -> dict[str, Any]:
+        _ = model
         action_name = str(action.get("action", ""))
         return {
             "progress": f"step:{step_index}",
@@ -65,7 +69,8 @@ class CaptureStub(CaptureAdapter):
 class ActionExecutorStub(ActionExecutor):
     """Action executor stub for tests."""
 
-    def handle(self, action: dict[str, Any], start_url: str) -> dict[str, Any]:
+    def handle(self, action: dict[str, Any], start_url: str, runtime: dict[str, Any]) -> dict[str, Any]:
+        _ = runtime
         return {"success": True, "action": action["action"], "url": start_url}
 
 
@@ -101,7 +106,7 @@ def test_run_execution_service_marks_success_and_writes_steps() -> None:
         runtime={"mode": "container_desktop", "viewport": {"width": 1080, "height": 1920}},
         limits=RunLimits(max_steps=5, time_budget_sec=60, max_retries_per_step=1),
         allowed_actions=["move", "click", "scroll", "type", "key", "wait", "done", "failed"],
-        llm={"planner_model": "chatgpt-5.4", "evaluator_model": "chatgpt-5.4"},
+        llm={"planner_model": "gpt-5.4", "evaluator_model": "gpt-5.4"},
         now=datetime.now(tz=timezone.utc),
     )
     run_repository.save(run=run)
@@ -141,7 +146,7 @@ def test_run_execution_service_marks_failed_when_ai_requests_failed_action() -> 
         runtime={"mode": "container_desktop", "viewport": {"width": 1080, "height": 1920}},
         limits=RunLimits(max_steps=5, time_budget_sec=60, max_retries_per_step=1),
         allowed_actions=["move", "click", "scroll", "type", "key", "wait", "done", "failed"],
-        llm={"planner_model": "chatgpt-5.4", "evaluator_model": "chatgpt-5.4"},
+        llm={"planner_model": "gpt-5.4", "evaluator_model": "gpt-5.4"},
         now=datetime.now(tz=timezone.utc),
     )
     run_repository.save(run=run)
