@@ -1,6 +1,15 @@
 .DS_Store
+.idea/
+.vscode/
+.venv/
 __pycache__/
 .pycache/
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.pyc
+.env
 artifacts/*
 !.gitkeep
