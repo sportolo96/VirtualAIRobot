@@ -29,7 +29,9 @@ class ApiContainerStub:
         run_repository = InMemoryRunRepository()
         step_repository = InMemoryStepRepository()
         queue_client = QueueSpy()
-        self._create_run_handler = CreateRunHandler(run_repository=run_repository, queue_client=queue_client)
+        self._create_run_handler = CreateRunHandler(
+            run_repository=run_repository, queue_client=queue_client
+        )
         self._get_run_status_handler = GetRunStatusHandler(run_repository=run_repository)
         self._list_run_steps_handler = ListRunStepsHandler(step_repository=step_repository)
         self._cancel_run_handler = CancelRunHandler(run_repository=run_repository)

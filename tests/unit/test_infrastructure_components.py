@@ -12,7 +12,9 @@ from src.infrastructure.safety.default_safety_guard import DefaultSafetyGuard
 
 def test_local_action_executor_accepts_supported_actions() -> None:
     executor = LocalActionExecutor()
-    result = executor.handle(action={"action": "done", "target": None, "value": None}, start_url="https://example.com")
+    result = executor.handle(
+        action={"action": "done", "target": None, "value": None}, start_url="https://example.com"
+    )
 
     assert result["success"] is True
     assert result["action"] == "done"
@@ -57,7 +59,9 @@ def test_rq_queue_client_enqueues_job(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(rq_queue_client, "Queue", QueueStub)
 
     connection = object()
-    client = rq_queue_client.RqQueueClient(redis_client=connection, queue_name="runs", job_path="jobs.process")
+    client = rq_queue_client.RqQueueClient(
+        redis_client=connection, queue_name="runs", job_path="jobs.process"
+    )
     client.enqueue_process_run(run_id="run_123")
 
     assert captured == {

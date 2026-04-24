@@ -64,7 +64,9 @@ class RunTransformer:
             finished_at=datetime.fromisoformat(str(record["finished_at"]))
             if record["finished_at"]
             else None,
-            final_evaluation=dict(record["final_evaluation"]) if record["final_evaluation"] else None,
+            final_evaluation=dict(record["final_evaluation"])
+            if record["final_evaluation"]
+            else None,
             cancel_requested=bool(record["cancel_requested"]),
             current_step=int(record["current_step"]),
             last_action=str(record["last_action"]) if record["last_action"] is not None else None,

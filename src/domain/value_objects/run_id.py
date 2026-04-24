@@ -11,5 +11,5 @@ class RunId(Id):
     """Run identifier value object."""
 
     @classmethod
-    def new(cls) -> "RunId":
+    def new(cls) -> RunId:
         return cls(value=f"run_{uuid.uuid4().hex}")

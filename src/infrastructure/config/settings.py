@@ -29,7 +29,14 @@ def load_settings() -> Settings:
         planner_template_path=Path(
             os.getenv(
                 "PLANNER_TEMPLATE_PATH",
-                str(project_root / "src" / "infrastructure" / "ai" / "templates" / "planner_prompt.txt"),
+                str(
+                    project_root
+                    / "src"
+                    / "infrastructure"
+                    / "ai"
+                    / "templates"
+                    / "planner_prompt.txt"
+                ),
             )
         ),
         evaluator_template_path=Path(

@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import json
-
-from redis import Redis
+from typing import Any
 
 from src.domain.entities.run import Run
 from src.domain.repositories.run_repository import RunRepository
@@ -13,7 +12,7 @@ from src.infrastructure.transformers.run_transformer import RunTransformer
 class RedisRunRepository(RunRepository):
     """Redis-backed run repository."""
 
-    def __init__(self, redis_client: Redis, transformer: RunTransformer) -> None:
+    def __init__(self, redis_client: Any, transformer: RunTransformer) -> None:
         self._redis_client = redis_client
         self._transformer = transformer
 
@@ -29,6 +28,8 @@ class RedisRunRepository(RunRepository):
             return None
         if isinstance(payload, bytes):
             payload = payload.decode("utf-8")
+        elif not isinstance(payload, str):
+            payload = str(payload)
         record = json.loads(payload)
         return self._transformer.from_record(record=record)
 

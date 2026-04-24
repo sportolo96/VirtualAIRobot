@@ -52,13 +52,17 @@ class PlannerPipeline(Planner):
         return decision.model_dump()
 
     def _model_stub(self, prompt_value: Any) -> str:
-        prompt_text = prompt_value.to_string() if hasattr(prompt_value, "to_string") else str(prompt_value)
+        prompt_text = (
+            prompt_value.to_string() if hasattr(prompt_value, "to_string") else str(prompt_value)
+        )
         lowered = prompt_text.lower()
         action = "wait"
         target: Optional[str] = None
         value: Optional[str] = None
 
-        if "terminal action policy" in lowered and ("step index: 2" in lowered or "step index: 3" in lowered):
+        if "terminal action policy" in lowered and (
+            "step index: 2" in lowered or "step index: 3" in lowered
+        ):
             action = "done"
         elif "click" in lowered:
             action = "click"

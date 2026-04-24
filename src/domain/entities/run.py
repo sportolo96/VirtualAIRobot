@@ -45,7 +45,7 @@ class Run:
         allowed_actions: list[str],
         llm: dict[str, Any],
         now: datetime,
-    ) -> "Run":
+    ) -> Run:
         return cls(
             run_id=RunId.new(),
             goal=goal,
@@ -96,7 +96,9 @@ class Run:
         self.cancel_requested = True
         self.updated_at = now
 
-    def update_progress(self, now: datetime, current_step: int, last_action: str, last_evaluation: str) -> None:
+    def update_progress(
+        self, now: datetime, current_step: int, last_action: str, last_evaluation: str
+    ) -> None:
         self.current_step = current_step
         self.last_action = last_action
         self.last_evaluation = last_evaluation

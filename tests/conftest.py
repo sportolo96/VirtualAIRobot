@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 import socket
+from datetime import datetime, timezone
 from typing import Any, Callable
 
 import pytest
@@ -37,13 +37,20 @@ def run_factory() -> Callable[..., Run]:
                 "success_criteria",
                 {"type": "text_or_dom", "must_include": ["Profile"], "must_not_include": []},
             ),
-            runtime=overrides.pop("runtime", {"mode": "container_desktop", "viewport": {"width": 1080, "height": 1920}}),
-            limits=overrides.pop("limits", RunLimits(max_steps=5, time_budget_sec=60, max_retries_per_step=1)),
+            runtime=overrides.pop(
+                "runtime",
+                {"mode": "container_desktop", "viewport": {"width": 1080, "height": 1920}},
+            ),
+            limits=overrides.pop(
+                "limits", RunLimits(max_steps=5, time_budget_sec=60, max_retries_per_step=1)
+            ),
             allowed_actions=overrides.pop(
                 "allowed_actions",
                 ["move", "click", "scroll", "type", "key", "wait", "done", "failed"],
             ),
-            llm=overrides.pop("llm", {"planner_model": "chatgpt-5.4", "evaluator_model": "chatgpt-5.4"}),
+            llm=overrides.pop(
+                "llm", {"planner_model": "chatgpt-5.4", "evaluator_model": "chatgpt-5.4"}
+            ),
             now=now,
         )
 

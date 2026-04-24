@@ -52,14 +52,16 @@ class EvaluatorPipeline(Evaluator):
         return evaluation.model_dump()
 
     def _model_stub(self, prompt_value: Any) -> str:
-        prompt_text = prompt_value.to_string() if hasattr(prompt_value, "to_string") else str(prompt_value)
+        prompt_text = (
+            prompt_value.to_string() if hasattr(prompt_value, "to_string") else str(prompt_value)
+        )
         lowered = prompt_text.lower()
-        goal_achieved = "\"action\": \"done\"" in lowered
+        goal_achieved = '"action": "done"' in lowered
         risk = "low"
         reason = "Success criteria likely unmet"
         progress = "Goal not reached yet"
 
-        if "\"action\": \"failed\"" in lowered:
+        if '"action": "failed"' in lowered:
             risk = "high"
             reason = "AI requested terminal failure"
             progress = "Run failed by AI decision"

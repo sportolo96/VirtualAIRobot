@@ -71,3 +71,24 @@ curl -sS -X POST http://localhost:8000/v1/runs/$RUN_ID/cancel
 ```bash
 python3 -m pytest -q
 ```
+
+## Static Analysis and Auto-Fix
+PHPStan-like static type check:
+```bash
+make typecheck
+```
+
+Lint check:
+```bash
+make lint
+```
+
+Auto-fix (lint + formatting), then type check:
+```bash
+make quality-fix
+```
+
+Full quality gate:
+```bash
+make quality
+```

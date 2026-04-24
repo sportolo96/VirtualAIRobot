@@ -93,7 +93,11 @@ def test_run_execution_service_marks_success_and_writes_steps() -> None:
     run = Run.create(
         goal="Reach dashboard",
         start_url="https://example.com/login",
-        success_criteria={"type": "text_or_dom", "must_include": ["Dashboard"], "must_not_include": []},
+        success_criteria={
+            "type": "text_or_dom",
+            "must_include": ["Dashboard"],
+            "must_not_include": [],
+        },
         runtime={"mode": "container_desktop", "viewport": {"width": 1080, "height": 1920}},
         limits=RunLimits(max_steps=5, time_budget_sec=60, max_retries_per_step=1),
         allowed_actions=["move", "click", "scroll", "type", "key", "wait", "done", "failed"],
@@ -129,7 +133,11 @@ def test_run_execution_service_marks_failed_when_ai_requests_failed_action() -> 
     run = Run.create(
         goal="Reach dashboard",
         start_url="https://example.com/login",
-        success_criteria={"type": "text_or_dom", "must_include": ["Dashboard"], "must_not_include": []},
+        success_criteria={
+            "type": "text_or_dom",
+            "must_include": ["Dashboard"],
+            "must_not_include": [],
+        },
         runtime={"mode": "container_desktop", "viewport": {"width": 1080, "height": 1920}},
         limits=RunLimits(max_steps=5, time_budget_sec=60, max_retries_per_step=1),
         allowed_actions=["move", "click", "scroll", "type", "key", "wait", "done", "failed"],

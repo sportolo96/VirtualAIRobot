@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+from typing import Any, Protocol
 
 from flask import Blueprint, Response, jsonify, request
 from pydantic import ValidationError
@@ -11,11 +12,26 @@ from src.application.presenters.run_presenter import RunPresenter
 from src.application.presenters.step_presenter import StepPresenter
 from src.application.queries.get_run_status_query import GetRunStatusQuery
 from src.application.queries.list_run_steps_query import ListRunStepsQuery
-from src.bootstrap.dependency_container import DependencyContainer
 from src.interfaces.http.schemas import CreateRunRequestSchema
 
 
-def create_runs_blueprint(container: DependencyContainer) -> Blueprint:
+class RunsContainer(Protocol):
+    """Protocol for runs route dependencies."""
+
+    def create_create_run_handler(self) -> Any:
+        raise NotImplementedError
+
+    def create_get_run_status_handler(self) -> Any:
+        raise NotImplementedError
+
+    def create_list_run_steps_handler(self) -> Any:
+        raise NotImplementedError
+
+    def create_cancel_run_handler(self) -> Any:
+        raise NotImplementedError
+
+
+def create_runs_blueprint(container: RunsContainer) -> Blueprint:
     """Create runs blueprint."""
 
     blueprint = Blueprint(name="runs", import_name=__name__)

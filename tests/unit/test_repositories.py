@@ -16,7 +16,7 @@ class FakeRedis:
     """Minimal in-memory Redis stub for repository tests."""
 
     def __init__(self) -> None:
-        self.values: dict[str, str] = {}
+        self.values: dict[str, str | bytes] = {}
         self.lists: dict[str, list[str]] = {}
 
     def set(self, key: str, value: str) -> None:
@@ -85,7 +85,9 @@ def test_redis_run_repository_handles_bytes_payload(run_factory) -> None:
 
     repository.save(run=run)
     key = f"run:{run.run_id.value}"
-    fake_redis.values[key] = fake_redis.values[key].encode("utf-8")
+    existing = fake_redis.values[key]
+    if isinstance(existing, str):
+        fake_redis.values[key] = existing.encode("utf-8")
 
     loaded = repository.get(run_id=RunId(value=run.run_id.value))
 
