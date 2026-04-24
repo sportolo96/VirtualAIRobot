@@ -23,6 +23,29 @@ Runtime outcome policy:
 docker compose up --build
 ```
 
+## AI Initialization
+Current state:
+- The project currently uses a local stub AI pipeline.
+- No API key is required for the current baseline runtime.
+
+Initialize environment for real provider integration:
+1. Create a `.env` file in project root:
+```bash
+cat > .env <<'EOF'
+AI_PROVIDER=openai
+AI_MODEL=chatgpt-5.4
+OPENAI_API_KEY=your_real_key_here
+EOF
+```
+2. Start with env file:
+```bash
+docker compose --env-file .env up --build
+```
+
+Note:
+- `OPENAI_API_KEY` is prepared for the upcoming real provider binding.
+- Until provider binding is implemented, runtime behavior is still stub-based.
+
 ## How to test and use
 1. Start the stack:
 ```bash
