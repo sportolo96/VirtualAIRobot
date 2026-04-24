@@ -1,15 +1,15 @@
 # Documentation Maintenance Workflow
 
 ## Scope
-Minden kód- vagy szerkezeti változás a VirtualAIRobot projektben.
+Any code or structural change in the VirtualAIRobot project.
 
 ## Mandatory Rule
-- Funkcionális módosítás csak dokumentáció-frissítéssel együtt tekinthető késznek.
-- Működésbeli változás esetén a `README.md` frissítése is kötelező.
+- A functional change is complete only with documentation updates.
+- For behavior changes, `README.md` updates are also mandatory.
 
-## Mit kell frissíteni
-- API contract változás: `docs/system-design.md` API fejezet.
-- Queue/state machine változás: `docs/system-design.md` Run Lifecycle fejezet.
-- Agent loop vagy action logika változás: `docs/system-design.md` Execution Loop fejezet.
-- Runtime/config változás: `docs/system-design.md` Deployment and Runtime Config fejezet.
-- Használat/tesztelés/üzemeltetés változás: `README.md` megfelelő szekciói.
+## What to Update
+- API contract change: `docs/system-design.md` API section.
+- Queue/state machine change: `docs/system-design.md` Run Lifecycle section.
+- Agent loop or action logic change: `docs/system-design.md` Execution Loop section.
+- Runtime/config change: `docs/system-design.md` Deployment and Runtime Config section.
+- Usage/testing/operations change: relevant sections in `README.md`.

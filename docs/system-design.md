@@ -1,49 +1,49 @@
-# VirtualAIRobot - Rendszerterv
+# VirtualAIRobot - System Design
 
-## 1. Cél
-A rendszer célja weboldalak AI/OS szintű vezérlése úgy, hogy minden action között screenshot alapú AI döntés történjen a cél eléréséhez.
+## 1. Goal
+The goal is AI/OS-level web automation where every action is driven by screenshot-based AI decisions toward a configured objective.
 
-Kiemelt követelmények:
-- API-first működés
-- Aszinkron queue feldolgozás
-- Actionönként screenshot + AI kiértékelés
-- Paraméterezhető cél/URL/sikerfeltétel
-- Részletes futási eredmény és értékelés visszaadása
-- Kötelező Docker alapú konténeres futtatás
+Key requirements:
+- API-first operation
+- Asynchronous queue processing
+- Screenshot + AI evaluation per action
+- Configurable goal/start URL/success criteria
+- Detailed run result and evaluation response
+- Mandatory Docker-based containerized runtime
 
-## 2. Architektúra
+## 2. Architecture
 
-### 2.1 Komponensek
+### 2.1 Components
 - API Service (Flask)
 - Queue (Redis + RQ)
 - Worker Service (RQ worker)
-- Browser/OS Adapter réteg
+- Browser/OS Adapter layer
 - AI Planner/Evaluator orchestration (LangChain)
 - Artifact Store (filesystem/object storage)
 
-### 2.2 Rétegek (DDD + CQRS)
-- `src/domain`: entitások és üzleti szabályok
-- `src/application`: command/query use-case-ek
-- `src/infrastructure`: queue, AI, browser, OS adapterek
+### 2.2 Layers (DDD + CQRS)
+- `src/domain`: entities and business rules
+- `src/application`: command/query use cases
+- `src/infrastructure`: queue, AI, browser, OS adapters
 - `src/interfaces`: HTTP API
 
-### 2.3 LLM orchestration (LangChain best practice)
-- A planner és evaluator külön prompt template-et használ, verziózott template fájlokkal.
-- A hívások LCEL pipeline-on futnak: input mapping -> prompt template -> model -> structured output parser.
-- A model kimenet minden esetben strukturált, validált DTO (például `PlannerDecision`, `StepEvaluation`).
-- Retry, timeout, fallback és tracing az `infrastructure` rétegben történik.
-- Domain üzleti szabály nem kerül promptba; a döntési guardok a `domain` és `application` rétegben maradnak.
+### 2.3 LLM Orchestration (LangChain Best Practice)
+- Planner and evaluator use separate prompt templates with versioned template files.
+- Calls run through LCEL pipelines: input mapping -> prompt template -> model -> structured output parser.
+- Model output is always structured and validated DTOs (for example `PlannerDecision`, `StepEvaluation`).
+- Retry, timeout, fallback, and tracing are handled in the infrastructure layer.
+- Domain business rules are not embedded in prompts; decision guards remain in domain/application layers.
 
-### 2.4 Első implementációs baseline
-- Queue producer: `POST /v1/runs` enqueue RQ queue-ra.
+### 2.4 First Implementation Baseline
+- Queue producer: `POST /v1/runs` enqueues to RQ.
 - Worker job: `src.interfaces.worker.jobs.process_run_job`.
-- Run és step state Redis-ben tárolódik repository rétegen keresztül.
-- Screenshot adapter jelenleg filesystem alapú baseline artifactot készít (`.png`).
-- Planner/Evaluator jelenleg LangChain template + pipeline stub modellel fut a későbbi provider integrációig.
+- Run and step state are persisted in Redis via repository layer.
+- Screenshot adapter currently writes filesystem baseline artifacts (`.png`).
+- Planner/Evaluator currently run with LangChain template + pipeline stubs until provider integration is finalized.
 
 ## 3. Run Lifecycle
 
-### 3.1 Állapotgép
+### 3.1 State Machine
 - `queued`
 - `running`
 - `succeeded`
@@ -51,7 +51,7 @@ Kiemelt követelmények:
 - `cancelled`
 - `timeout`
 
-### 3.2 Fő endpointok
+### 3.2 Main Endpoints
 - `POST /v1/runs`
 - `GET /v1/runs/{run_id}`
 - `GET /v1/runs/{run_id}/steps`
@@ -59,14 +59,14 @@ Kiemelt követelmények:
 
 ## 4. API Contract
 
-### 4.1 Run indítás (request)
+### 4.1 Run Create (request)
 ```json
 {
-  "goal": "Jelentkezz be és nyisd meg a profil oldalt",
+  "goal": "Log in and open the profile page",
   "start_url": "https://example.com/login",
   "success_criteria": {
     "type": "text_or_dom",
-    "must_include": ["Profil", "Kijelentkezés"],
+    "must_include": ["Profile", "Logout"],
     "must_not_include": ["Login failed"]
   },
   "runtime": {
@@ -86,7 +86,7 @@ Kiemelt követelmények:
 }
 ```
 
-### 4.2 Run státusz (response)
+### 4.2 Run Status (response)
 ```json
 {
   "run_id": "run_01...",
@@ -99,20 +99,20 @@ Kiemelt követelmények:
   },
   "summary": {
     "last_action": "click",
-    "last_evaluation": "Login form submitted, waiting dashboard load"
+    "last_evaluation": "Action executed, waiting for next state"
   }
 }
 ```
 
-### 4.3 Final eredmény (response részlet)
+### 4.3 Final Result (response excerpt)
 ```json
 {
   "run_id": "run_01...",
   "status": "succeeded",
   "goal_achieved": true,
   "final_evaluation": {
-    "score": 0.93,
-    "reason": "A success feltételek teljesültek"
+    "reason": "Planner returned terminal action done",
+    "terminal_action": "done"
   },
   "result": {
     "steps_total": 19,
@@ -126,58 +126,58 @@ Kiemelt követelmények:
 ```
 
 ## 5. Execution Loop
-Minden step kötelező sorrendje:
+Mandatory step order:
 1. Pre-action screenshot capture
-2. AI planner pipeline döntés a következő actionről (LangChain template + parser)
-3. Action végrehajtás OS inputtal
+2. AI planner pipeline decision (LangChain template + parser)
+3. Action execution through OS input layer
 4. Post-action screenshot capture
-5. AI evaluator pipeline értékelés (LangChain template + parser)
-6. Guard ellenőrzés (budget, retry, tiltott action)
+5. AI evaluator pipeline evaluation (LangChain template + parser)
+6. Guard checks (budget, retry, forbidden actions)
 
-A loop addig fut, amíg:
-- a planner action `done` (run sikeres), vagy
-- a planner action `failed` (run sikertelen), vagy
-- limit túllépés történik, vagy
-- manuális cancel érkezik.
+The loop ends when:
+- planner action is `done` (run succeeds), or
+- planner action is `failed` (run fails), or
+- a limit is exceeded, or
+- manual cancel is requested.
 
-## 6. Agent Szerepek
-- Planner Agent: következő action kiválasztása a cél felé
-- Evaluator Agent: action hatásának kiértékelése
-- Safety Agent: végrehajtási korlátok és policy enforcement
+## 6. Agent Roles
+- Planner Agent: selects the next action toward the goal
+- Evaluator Agent: evaluates action impact
+- Safety Agent: enforces runtime constraints and policy
 
 ## 7. Deployment and Runtime Config
 
-### 7.1 Konténeres futtatás
-- Kötelező deployment forma: Docker Compose alapú konténeres stack.
-- Alap mód: `container_desktop` (Linux Xvfb/noVNC desktop a konténeren belül)
-- API + Worker + Redis külön service
-- Artifact volume mount kötelező
+### 7.1 Containerized Runtime
+- Mandatory deployment format: Docker Compose container stack.
+- Base mode: `container_desktop` (Linux Xvfb/noVNC desktop inside container).
+- API + Worker + Redis as separate services.
+- Artifact volume mount is required.
 
-### 7.2 Cross-platform elv
-- Linux host: natív konténer desktop mód
-- macOS host: ugyanaz a konténer stack (Docker Desktop), noVNC megtekintéssel
-- Opcionális későbbi mód: `host_bridge` (ha natív host input vezérlés is kell)
+### 7.2 Cross-Platform Principle
+- Linux host: native container desktop mode.
+- macOS host: same container stack via Docker Desktop, with optional noVNC viewing.
+- Optional future mode: `host_bridge` (if native host input control is needed).
 
-### 7.3 Fő kapcsolók (terv)
+### 7.3 Main Runtime Keys (plan)
 - `RUNTIME_MODE`
 - `QUEUE_BACKEND`
 - `AI_PROVIDER`, `AI_MODEL`
 - `MAX_STEPS_DEFAULT`, `TIME_BUDGET_DEFAULT_SEC`
 - `ARTIFACT_RETENTION_DAYS`
 
-## 8. Megfigyelhetőség
-- Run szintű structured log
-- Step szintű action + evaluation trace
-- Queue latency és run duration metrikák
-- Hibák kategorizálása: validation, runtime, AI, timeout, cancellation
+## 8. Observability
+- Run-level structured logs
+- Step-level action + evaluation trace
+- Queue latency and run duration metrics
+- Error categories: validation, runtime, AI, timeout, cancellation
 
-## 9. Biztonság és korlátok
-- Engedélyezett action lista kényszerítése
-- URL allowlist/denylist támogatás
-- Hard time budget és step limit
-- API kulcs alapú hitelesítés (későbbi implementációs fázis)
+## 9. Security and Limits
+- Enforced allowlist of actions
+- URL allowlist/denylist support
+- Hard time budget and step limits
+- API-key based authentication (later phase)
 
-## 10. Nyitott pontok
-- Artifact tárolás: lokális volume vs object storage
-- Webhook callback szükségessége polling mellett
-- Model fallback stratégia planner/evaluator szerepkörben
+## 10. Open Points
+- Artifact storage target: local volume vs object storage
+- Need for webhook callbacks in addition to polling
+- Model fallback strategy across planner/evaluator roles

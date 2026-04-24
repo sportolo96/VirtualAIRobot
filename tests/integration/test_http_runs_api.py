@@ -47,11 +47,8 @@ class ApiContainerStub:
         return self._cancel_run_handler
 
 
-def test_runs_api_baseline_flow() -> None:
-    app: Flask = create_app(container=ApiContainerStub())
-    client = app.test_client()
-
-    payload = {
+def _build_payload() -> dict:
+    return {
         "goal": "Open profile page",
         "start_url": "https://example.com/login",
         "success_criteria": {
@@ -75,7 +72,16 @@ def test_runs_api_baseline_flow() -> None:
         },
     }
 
-    create_response = client.post("/v1/runs", json=payload)
+
+def _create_client() -> Flask:
+    return create_app(container=ApiContainerStub())
+
+
+def test_runs_api_baseline_flow() -> None:
+    app = _create_client()
+    client = app.test_client()
+
+    create_response = client.post("/v1/runs", json=_build_payload())
     assert create_response.status_code == 202
     run_id = create_response.get_json()["run_id"]
 
@@ -86,3 +92,46 @@ def test_runs_api_baseline_flow() -> None:
     steps_response = client.get(f"/v1/runs/{run_id}/steps")
     assert steps_response.status_code == 200
     assert steps_response.get_json()["steps"] == []
+
+
+def test_runs_api_returns_422_on_invalid_payload() -> None:
+    app = _create_client()
+    client = app.test_client()
+
+    response = client.post("/v1/runs", json={"goal": "missing fields"})
+
+    assert response.status_code == 422
+    assert "errors" in response.get_json()
+
+
+def test_runs_api_returns_404_for_missing_run_status() -> None:
+    app = _create_client()
+    client = app.test_client()
+
+    response = client.get("/v1/runs/run_missing")
+
+    assert response.status_code == 404
+    assert response.get_json()["error"] == "Run not found"
+
+
+def test_runs_api_returns_404_for_missing_run_cancel() -> None:
+    app = _create_client()
+    client = app.test_client()
+
+    response = client.post("/v1/runs/run_missing/cancel")
+
+    assert response.status_code == 404
+    assert response.get_json()["error"] == "Run not found"
+
+
+def test_runs_api_cancel_flow() -> None:
+    app = _create_client()
+    client = app.test_client()
+
+    create_response = client.post("/v1/runs", json=_build_payload())
+    run_id = create_response.get_json()["run_id"]
+
+    cancel_response = client.post(f"/v1/runs/{run_id}/cancel")
+
+    assert cancel_response.status_code == 202
+    assert cancel_response.get_json()["status"] == "cancel_requested"

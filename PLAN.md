@@ -1,51 +1,51 @@
-# VirtualAIRobot - Megvalósítási Terv
+# VirtualAIRobot - Implementation Plan
 
-## Cél
-Egy API-first, queue alapú AI/OS automatizációs rendszer készítése, ahol minden egyes action között kötelező a screenshot + AI kiértékelés, és az API visszaadja a teljes végrehajtási eredményt és értékelést.
+## Goal
+Build an API-first, queue-based AI/OS automation system where each step requires screenshot capture and AI evaluation, and the API returns full execution results and evaluation.
 
-## Alapelvek
-- Nincs `.md` scenario input: minden futási paraméter API kérésből érkezik.
-- Aszinkron futás: `POST /v1/runs` csak enqueue, futás workerben történik.
-- Minden step előtt és után képernyőkép készül.
-- A következő action mindig az aktuális screenshot AI-kiértékeléséből születik.
-- Kötelező Docker alapú konténeres futtatás.
-- A rendszer szállítási célformátuma Docker Compose stack (`api`, `worker`, `redis`).
-- macOS és Linux hoston ugyanazzal a konténeres stackkel kell futnia.
+## Core Principles
+- No `.md` scenario input: all run parameters come from API requests.
+- Asynchronous execution: `POST /v1/runs` only enqueues; processing happens in workers.
+- Screenshot capture is required before and after each step.
+- The next action is always derived from AI evaluation of the current screenshot context.
+- Docker-based containerized runtime is mandatory.
+- Delivery format is a Docker Compose stack (`api`, `worker`, `redis`).
+- The same containerized stack must run on both macOS and Linux hosts.
 
-## Fázisok
+## Phases
 
-### F0 - Projekt alap és konténer runtime
-- Python projekt váz (DDD + CQRS rétegek)
-- Dockerfile + docker-compose (api, worker, redis) kötelezően használatban
-- Flask API + RQ worker + Redis queue/state baseline implementáció
-- Környezeti kapcsolók (runtime mód, limits, AI provider, artifact storage)
+### F0 - Project Foundation and Container Runtime
+- Python project skeleton with DDD + CQRS layers.
+- Dockerfile + docker-compose (`api`, `worker`, `redis`) in mandatory use.
+- Flask API + RQ worker + Redis queue/state baseline implementation.
+- Runtime configuration switches (runtime mode, limits, AI provider, artifact storage).
 
-### F1 - Run lifecycle és queue
-- `Run` domain modell és állapotgép (`queued`, `running`, `succeeded`, `failed`, `cancelled`, `timeout`)
-- Queue producer (`POST /v1/runs`) és worker fogyasztó
-- Státusz API (`GET /v1/runs/{run_id}`)
+### F1 - Run Lifecycle and Queue
+- `Run` domain model and state machine (`queued`, `running`, `succeeded`, `failed`, `cancelled`, `timeout`).
+- Queue producer (`POST /v1/runs`) and worker consumer.
+- Status API (`GET /v1/runs/{run_id}`).
 
-### F2 - AI/OS iteratív végrehajtási ciklus
-- Step loop: pre-capture -> plan -> execute -> post-capture -> evaluate
-- LangChain best practice orchestration: planner/evaluator prompt template + LCEL pipeline
-- Strukturált, validált LLM kimenet (decision/evaluation DTO)
-- Planner terminal action szabály: `done` => success, `failed` => failure
-- Engedélyezett action készlet és guardrail-ek
-- `max_steps`, `time_budget_sec`, `max_retries_per_step` korlátok
+### F2 - Iterative AI/OS Execution Cycle
+- Step loop: pre-capture -> plan -> execute -> post-capture -> evaluate.
+- LangChain best-practice orchestration: planner/evaluator prompt templates + LCEL pipelines.
+- Structured, validated LLM output (decision/evaluation DTOs).
+- Planner terminal action rule: `done` => success, `failed` => failure.
+- Allowed action set and guardrails.
+- Limits: `max_steps`, `time_budget_sec`, `max_retries_per_step`.
 
-### F3 - Eredmény és értékelés
-- `GET /v1/runs/{run_id}/steps` részletes trace
-- Final evaluation (goal reached / not reached + indoklás)
-- Artifact hivatkozások (screenshotok, logok)
+### F3 - Result and Evaluation
+- Detailed trace endpoint: `GET /v1/runs/{run_id}/steps`.
+- Final evaluation (goal reached / not reached + reasoning).
+- Artifact references (screenshots, logs).
 
-### F4 - Operáció és dokumentáció
-- AGENTS és workflow szabályok véglegesítése
-- docs frissítési folyamat
-- GitLab feltöltés és CI/CD terv (későbbi push és pipeline)
+### F4 - Operations and Documentation
+- Finalize AGENTS and workflow rules.
+- Maintain documentation update flow.
+- GitLab delivery and CI/CD plan (later push and pipeline integration).
 
-## Első szállítási scope
-- 1 enqueue endpoint
-- 1 status endpoint
-- 1 steps endpoint
-- 1 worker loop a kötelező screenshot + AI-eval ciklussal
-- Docker compose stack (api + worker + redis)
+## First Delivery Scope
+- 1 enqueue endpoint.
+- 1 status endpoint.
+- 1 steps endpoint.
+- 1 worker loop with mandatory screenshot + AI-eval cycle.
+- Docker Compose stack (`api` + `worker` + `redis`).
