@@ -44,6 +44,7 @@ Key requirements:
 - Planner/Evaluator run through LangChain template + parser pipelines with live OpenAI Responses API calls.
 - Planner/Evaluator receive the same step screenshot image as OpenAI image input.
 - Action execution uses OS-level input events via `xdotool` for supported non-terminal actions.
+- Optional completion webhook callback is emitted on terminal run status.
 
 ## 3. Run Lifecycle
 
@@ -64,6 +65,10 @@ Key requirements:
 Run create precondition:
 - `POST /v1/runs` requires configured AI runtime (`AI_PROVIDER=openai` and `OPENAI_API_KEY`).
 - If AI runtime is missing or live connectivity check fails, API returns `503` and does not enqueue the run.
+
+Endpoint auth precondition:
+- If `API_AUTH_ENABLED=true`, all `/v1/*` endpoints require `X-API-Key` header.
+- `GET /health` remains unauthenticated for container health checks.
 
 ## 4. API Contract
 
@@ -90,6 +95,10 @@ Run create precondition:
   "llm": {
     "planner_model": "gpt-5.4",
     "evaluator_model": "gpt-5.4"
+  },
+  "callbacks": {
+    "completion_url": "https://example.test/webhook",
+    "headers": {"X-Webhook-Key": "abc"}
   }
 }
 ```
@@ -140,6 +149,54 @@ Run create precondition:
 }
 ```
 
+### 4.5 API Auth Error (response)
+```json
+{
+  "error": "Unauthorized"
+}
+```
+
+### 4.6 Completion Webhook Callback (request payload)
+```json
+{
+  "event": "run.completed",
+  "run_id": "run_01...",
+  "status": "succeeded",
+  "goal_achieved": true,
+  "error": null,
+  "final_evaluation": {
+    "terminal_action": "done"
+  },
+  "progress": {
+    "current_step": 4,
+    "max_steps": 8,
+    "elapsed_sec": 22
+  },
+  "updated_at": "2026-04-24T09:36:14.512258+00:00",
+  "finished_at": "2026-04-24T09:36:14.512258+00:00"
+}
+```
+
+Webhook reliability:
+- Failed callback delivery is retried with linear backoff (`WEBHOOK_MAX_RETRIES`, `WEBHOOK_RETRY_BACKOFF_SEC`).
+- After retry exhaustion, payload is written to dead-letter storage (`WEBHOOK_DEAD_LETTER_DIR`).
+
+Webhook security headers:
+- `X-VAR-Timestamp`: unix timestamp of callback generation.
+- `X-VAR-Idempotency-Key`: stable key for duplicate suppression (`{run_id}:{status}`).
+- `X-VAR-Signature`: optional `sha256=<hex>` HMAC over `timestamp.body` when `WEBHOOK_SIGNING_SECRET` is configured.
+- `X-VAR-Signature-Alg`: `hmac-sha256` when signature is present.
+
+Webhook signing policy:
+- `WEBHOOK_SIGNING_SECRET` remains optional for compatibility.
+- When not configured, signed headers are omitted and only timestamp/idempotency headers are sent.
+
+Webhook receiver best practices:
+- Verify `X-VAR-Signature` when secret is configured.
+- Enforce replay window with `X-VAR-Timestamp` (for example 300 seconds max age).
+- Deduplicate using `X-VAR-Idempotency-Key` with persistent TTL cache.
+- Support secret rotation with dual-secret verification during migration.
+
 ## 5. Execution Loop
 Mandatory step order:
 1. Pre-action screenshot capture
@@ -179,12 +236,15 @@ The loop ends when:
 - `RUNTIME_MODE`
 - `QUEUE_BACKEND`
 - `AI_PROVIDER`, `AI_MODEL`, `OPENAI_API_KEY`
+- `API_AUTH_ENABLED`, `API_AUTH_KEY`
+- `WEBHOOK_ENABLED`, `WEBHOOK_TIMEOUT_SEC`, `WEBHOOK_MAX_RETRIES`, `WEBHOOK_RETRY_BACKOFF_SEC`, `WEBHOOK_SIGNING_SECRET`, `WEBHOOK_DEAD_LETTER_DIR`
 - `DEFAULT_VIEWPORT_WIDTH`, `DEFAULT_VIEWPORT_HEIGHT`
 - `MAX_STEPS_DEFAULT`, `TIME_BUDGET_DEFAULT_SEC`
 - `ARTIFACT_RETENTION_DAYS`
 
 ## 8. Observability
 - Run-level structured logs
+- Request-level structured HTTP logs with `request_id` and latency
 - Step-level action + evaluation trace
 - Queue latency and run duration metrics
 - Error categories: validation, runtime, AI, timeout, cancellation
@@ -193,9 +253,8 @@ The loop ends when:
 - Enforced allowlist of actions
 - URL allowlist/denylist support
 - Hard time budget and step limits
-- API-key based authentication (later phase)
+- Shared API-key authentication for `/v1/*` endpoints (configurable)
 
 ## 10. Open Points
 - Artifact storage target: local volume vs object storage
-- Need for webhook callbacks in addition to polling
 - Model fallback strategy across planner/evaluator roles

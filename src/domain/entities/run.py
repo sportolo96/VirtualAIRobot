@@ -21,6 +21,7 @@ class Run:
     limits: RunLimits
     allowed_actions: list[str]
     llm: dict[str, Any]
+    callbacks: dict[str, Any]
     status: RunStatus
     goal_achieved: bool
     created_at: datetime
@@ -45,6 +46,7 @@ class Run:
         allowed_actions: list[str],
         llm: dict[str, Any],
         now: datetime,
+        callbacks: dict[str, Any] | None = None,
     ) -> Run:
         return cls(
             run_id=RunId.new(),
@@ -55,6 +57,7 @@ class Run:
             limits=limits,
             allowed_actions=allowed_actions,
             llm=llm,
+            callbacks=callbacks or {},
             status=RunStatus.QUEUED,
             goal_achieved=False,
             created_at=now,

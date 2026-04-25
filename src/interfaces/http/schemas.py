@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -40,6 +41,13 @@ class LlmSchema(BaseModel):
     evaluator_model: str = "gpt-5.4"
 
 
+class CallbacksSchema(BaseModel):
+    """Callbacks schema."""
+
+    completion_url: Optional[str] = None
+    headers: dict[str, str] = Field(default_factory=dict)
+
+
 class CreateRunRequestSchema(BaseModel):
     """Create run request schema."""
 
@@ -52,3 +60,4 @@ class CreateRunRequestSchema(BaseModel):
         default_factory=lambda: ["move", "click", "scroll", "type", "key", "wait", "done", "failed"]
     )
     llm: LlmSchema = Field(default_factory=LlmSchema)
+    callbacks: CallbacksSchema = Field(default_factory=CallbacksSchema)

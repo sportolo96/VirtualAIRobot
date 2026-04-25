@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 
@@ -15,3 +15,4 @@ class CreateRunCommand:
     limits: dict[str, int]
     allowed_actions: list[str]
     llm: dict[str, Any]
+    callbacks: dict[str, Any] = field(default_factory=dict)

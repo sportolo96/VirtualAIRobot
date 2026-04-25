@@ -31,6 +31,7 @@ class CreateRunHandler:
             allowed_actions=command.allowed_actions,
             llm=command.llm,
             now=now,
+            callbacks=command.callbacks,
         )
         self._run_repository.save(run=run)
         self._queue_client.enqueue_process_run(run_id=run.run_id.value)

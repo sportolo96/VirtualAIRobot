@@ -12,6 +12,14 @@ def test_load_settings_defaults(monkeypatch) -> None:
     monkeypatch.delenv("AI_PROVIDER", raising=False)
     monkeypatch.delenv("AI_MODEL", raising=False)
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("API_AUTH_ENABLED", raising=False)
+    monkeypatch.delenv("API_AUTH_KEY", raising=False)
+    monkeypatch.delenv("WEBHOOK_ENABLED", raising=False)
+    monkeypatch.delenv("WEBHOOK_TIMEOUT_SEC", raising=False)
+    monkeypatch.delenv("WEBHOOK_MAX_RETRIES", raising=False)
+    monkeypatch.delenv("WEBHOOK_RETRY_BACKOFF_SEC", raising=False)
+    monkeypatch.delenv("WEBHOOK_SIGNING_SECRET", raising=False)
+    monkeypatch.delenv("WEBHOOK_DEAD_LETTER_DIR", raising=False)
     monkeypatch.delenv("ARTIFACT_ROOT", raising=False)
     monkeypatch.delenv("PLANNER_TEMPLATE_PATH", raising=False)
     monkeypatch.delenv("EVALUATOR_TEMPLATE_PATH", raising=False)
@@ -25,6 +33,14 @@ def test_load_settings_defaults(monkeypatch) -> None:
     assert settings.ai_provider == "openai"
     assert settings.ai_model == "gpt-5.4"
     assert settings.openai_api_key == ""
+    assert settings.api_auth_enabled is False
+    assert settings.api_auth_key == ""
+    assert settings.webhook_enabled is False
+    assert settings.webhook_timeout_sec == 10
+    assert settings.webhook_max_retries == 3
+    assert settings.webhook_retry_backoff_sec == 1.0
+    assert settings.webhook_signing_secret == ""
+    assert settings.webhook_dead_letter_dir.name == "dead_letters"
     assert settings.flask_host == "0.0.0.0"
     assert settings.flask_port == 8000
     assert settings.planner_template_path.name == "planner_prompt.txt"
@@ -42,6 +58,14 @@ def test_load_settings_from_environment(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("AI_PROVIDER", "openai")
     monkeypatch.setenv("AI_MODEL", "gpt-5.4")
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    monkeypatch.setenv("API_AUTH_ENABLED", "true")
+    monkeypatch.setenv("API_AUTH_KEY", "shared-secret")
+    monkeypatch.setenv("WEBHOOK_ENABLED", "true")
+    monkeypatch.setenv("WEBHOOK_TIMEOUT_SEC", "12")
+    monkeypatch.setenv("WEBHOOK_MAX_RETRIES", "5")
+    monkeypatch.setenv("WEBHOOK_RETRY_BACKOFF_SEC", "2.5")
+    monkeypatch.setenv("WEBHOOK_SIGNING_SECRET", "whsec_test")
+    monkeypatch.setenv("WEBHOOK_DEAD_LETTER_DIR", str(tmp_path / "dead_letters"))
     monkeypatch.setenv("ARTIFACT_ROOT", str(tmp_path / "artifacts"))
     monkeypatch.setenv("PLANNER_TEMPLATE_PATH", str(planner))
     monkeypatch.setenv("EVALUATOR_TEMPLATE_PATH", str(evaluator))
@@ -55,6 +79,14 @@ def test_load_settings_from_environment(monkeypatch, tmp_path: Path) -> None:
     assert settings.ai_provider == "openai"
     assert settings.ai_model == "gpt-5.4"
     assert settings.openai_api_key == "test-key"
+    assert settings.api_auth_enabled is True
+    assert settings.api_auth_key == "shared-secret"
+    assert settings.webhook_enabled is True
+    assert settings.webhook_timeout_sec == 12
+    assert settings.webhook_max_retries == 5
+    assert settings.webhook_retry_backoff_sec == 2.5
+    assert settings.webhook_signing_secret == "whsec_test"
+    assert settings.webhook_dead_letter_dir == tmp_path / "dead_letters"
     assert settings.artifact_root == tmp_path / "artifacts"
     assert settings.planner_template_path == planner
     assert settings.evaluator_template_path == evaluator
@@ -86,6 +118,8 @@ def test_create_run_schema_defaults_chatgpt_and_terminal_actions() -> None:
 
     assert schema.llm.planner_model == "gpt-5.4"
     assert schema.llm.evaluator_model == "gpt-5.4"
+    assert schema.callbacks.completion_url is None
+    assert schema.callbacks.headers == {}
     assert "done" in schema.allowed_actions
     assert "failed" in schema.allowed_actions
 

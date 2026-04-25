@@ -14,6 +14,8 @@ from src.infrastructure.ai.pipelines.planner_pipeline import PlannerPipeline
 from src.infrastructure.ai.providers.openai_responses_client import OpenAIResponsesClient
 from src.infrastructure.capture.filesystem_capture_adapter import FilesystemCaptureAdapter
 from src.infrastructure.config.settings import Settings
+from src.infrastructure.notifications.no_op_completion_notifier import NoOpCompletionNotifier
+from src.infrastructure.notifications.webhook_completion_notifier import WebhookCompletionNotifier
 from src.infrastructure.queue.rq_queue_client import RqQueueClient
 from src.infrastructure.repositories.redis_run_repository import RedisRunRepository
 from src.infrastructure.repositories.redis_step_repository import RedisStepRepository
@@ -55,6 +57,17 @@ class DependencyContainer:
         self._capture_adapter = FilesystemCaptureAdapter(artifact_root=settings.artifact_root)
         self._action_executor = LocalActionExecutor()
         self._safety_guard = DefaultSafetyGuard()
+        self._completion_notifier = (
+            WebhookCompletionNotifier(
+                timeout_sec=settings.webhook_timeout_sec,
+                max_retries=settings.webhook_max_retries,
+                retry_backoff_sec=settings.webhook_retry_backoff_sec,
+                dead_letter_dir=settings.webhook_dead_letter_dir,
+                signing_secret=settings.webhook_signing_secret,
+            )
+            if settings.webhook_enabled
+            else NoOpCompletionNotifier()
+        )
 
     def assert_ai_runtime_ready(self) -> None:
         """Ensure AI runtime prerequisites are configured before enqueueing runs."""
@@ -98,6 +111,7 @@ class DependencyContainer:
             capture_adapter=self._capture_adapter,
             action_executor=self._action_executor,
             safety_guard=self._safety_guard,
+            completion_notifier=self._completion_notifier,
         )
         return ProcessRunHandler(run_execution_service=execution_service)
 

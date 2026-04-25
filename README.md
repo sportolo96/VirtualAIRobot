@@ -46,6 +46,14 @@ cp .env.example .env
 AI_PROVIDER=openai
 AI_MODEL=gpt-5.4
 OPENAI_API_KEY=your_real_key_here
+API_AUTH_ENABLED=false
+API_AUTH_KEY=your_shared_api_key_here
+WEBHOOK_ENABLED=false
+WEBHOOK_TIMEOUT_SEC=10
+WEBHOOK_MAX_RETRIES=3
+WEBHOOK_RETRY_BACKOFF_SEC=1.0
+WEBHOOK_SIGNING_SECRET=your_webhook_signing_secret_here
+WEBHOOK_DEAD_LETTER_DIR=artifacts/dead_letters
 DEFAULT_VIEWPORT_WIDTH=1080
 DEFAULT_VIEWPORT_HEIGHT=1920
 ```
@@ -59,10 +67,47 @@ Note:
 - `OPENAI_API_KEY` is mandatory for `POST /v1/runs`.
 - If `OPENAI_API_KEY` is missing, `POST /v1/runs` returns `503`.
 - If OpenAI runtime connectivity check fails, `POST /v1/runs` returns `503`.
+- API auth can be enabled with `API_AUTH_ENABLED=true`.
+- When enabled, `/v1/*` endpoints require `X-API-Key` header.
+- `GET /health` remains public.
+- Completion webhook delivery can be enabled with `WEBHOOK_ENABLED=true`.
+- Failed webhook deliveries are retried and then written to dead-letter JSON files.
+- `WEBHOOK_SIGNING_SECRET` is optional for compatibility; callbacks still work without signature headers.
+- If `WEBHOOK_SIGNING_SECRET` is set, callback requests include:
+  - `X-VAR-Timestamp`
+  - `X-VAR-Idempotency-Key`
+  - `X-VAR-Signature` (`sha256=<hex>` over `timestamp.body`)
+- Webhook best practice (recommended):
+  - Enable `WEBHOOK_SIGNING_SECRET` in production.
+  - Verify signature on the receiver side and reject stale timestamps (for example older than 5 minutes).
+  - Store and deduplicate `X-VAR-Idempotency-Key` (for example TTL 24 hours).
+  - Rotate webhook secrets with overlap support to avoid callback downtime.
 - Docker make targets use `docker compose --env-file .env` explicitly (`make build`, `make start`).
 - If `.env` is missing, Docker make targets fail fast.
 - Default run viewport is read from `.env` (`DEFAULT_VIEWPORT_WIDTH`, `DEFAULT_VIEWPORT_HEIGHT`) when request payload omits `runtime.viewport`.
 - `.env.example` contains placeholders only; never store real keys in `.env.example`.
+
+## Production profile (recommended)
+Compatibility note:
+- `WEBHOOK_SIGNING_SECRET` remains optional in runtime behavior for backward compatibility.
+- For production deployments, treat webhook signing as a required security baseline.
+
+Recommended production env baseline:
+```bash
+API_AUTH_ENABLED=true
+API_AUTH_KEY=replace_with_strong_shared_key
+WEBHOOK_ENABLED=true
+WEBHOOK_SIGNING_SECRET=replace_with_strong_webhook_secret
+WEBHOOK_TIMEOUT_SEC=10
+WEBHOOK_MAX_RETRIES=3
+WEBHOOK_RETRY_BACKOFF_SEC=1.0
+```
+
+Receiver-side production checks:
+- Verify `X-VAR-Signature` against `timestamp.body`.
+- Reject stale `X-VAR-Timestamp` values (for example >300 seconds old).
+- Deduplicate by `X-VAR-Idempotency-Key` using persistent TTL storage.
+- Support webhook secret rotation with overlap window.
 
 Action execution policy:
 - Non-terminal actions are executed as real OS input events through `xdotool` in the worker container.
@@ -82,8 +127,10 @@ make check
 
 3. Create a run:
 ```bash
+# Remove the X-API-Key header line if API auth is disabled.
 RUN_RESPONSE=$(curl -sS -X POST http://localhost:8000/v1/runs \
   -H 'Content-Type: application/json' \
+  -H 'X-API-Key: your_shared_api_key_here' \
   -d '{
     "goal":"Open profile page",
     "start_url":"https://example.com/login",
@@ -91,7 +138,8 @@ RUN_RESPONSE=$(curl -sS -X POST http://localhost:8000/v1/runs \
     "runtime":{"mode":"container_desktop","viewport":{"width":1080,"height":1920}},
     "limits":{"max_steps":5,"time_budget_sec":60,"max_retries_per_step":1},
     "allowed_actions":["move","click","scroll","type","key","wait","done","failed"],
-    "llm":{"planner_model":"gpt-5.4","evaluator_model":"gpt-5.4"}
+    "llm":{"planner_model":"gpt-5.4","evaluator_model":"gpt-5.4"},
+    "callbacks":{"completion_url":"https://example.test/webhook","headers":{"X-Webhook-Key":"abc"}}
   }')
 echo "$RUN_RESPONSE"
 RUN_ID=$(printf '%s' "$RUN_RESPONSE" | python3 -c 'import json,sys; data=json.load(sys.stdin); print(data.get("run_id",""))')
@@ -107,6 +155,7 @@ Non-political 444.hu example (inspect first 15 posts):
 ```bash
 RUN_RESPONSE=$(curl -sS -X POST http://localhost:8000/v1/runs \
   -H 'Content-Type: application/json' \
+  -H 'X-API-Key: your_shared_api_key_here' \
   -d '{
     "goal":"Open 444.hu. Dismiss overlays. Inspect the first 15 homepage posts in order using scroll actions as needed. Select the most technology-focused non-political post among those 15, open it, and return done with action.target as the article title and action.value as visible article content.",
     "start_url":"https://444.hu",
@@ -123,17 +172,18 @@ echo "$RUN_ID"
 
 4. Poll run status:
 ```bash
-curl -sS http://localhost:8000/v1/runs/$RUN_ID
+curl -sS -H 'X-API-Key: your_shared_api_key_here' http://localhost:8000/v1/runs/$RUN_ID
 ```
+Response headers include `X-Request-Id` for request tracing.
 
 5. Inspect step trace:
 ```bash
-curl -sS http://localhost:8000/v1/runs/$RUN_ID/steps
+curl -sS -H 'X-API-Key: your_shared_api_key_here' http://localhost:8000/v1/runs/$RUN_ID/steps
 ```
 
 6. Cancel a run manually if needed:
 ```bash
-curl -sS -X POST http://localhost:8000/v1/runs/$RUN_ID/cancel
+curl -sS -X POST -H 'X-API-Key: your_shared_api_key_here' http://localhost:8000/v1/runs/$RUN_ID/cancel
 ```
 
 7. Run tests locally:

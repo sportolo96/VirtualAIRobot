@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from flask import Flask
 
 from src.application.handlers.cancel_run_handler import CancelRunHandler
@@ -7,6 +9,7 @@ from src.application.handlers.create_run_handler import CreateRunHandler
 from src.application.handlers.get_run_status_handler import GetRunStatusHandler
 from src.application.handlers.list_run_steps_handler import ListRunStepsHandler
 from src.application.ports.queue_client import QueueClient
+from src.infrastructure.config.settings import Settings
 from src.infrastructure.repositories.in_memory_run_repository import InMemoryRunRepository
 from src.infrastructure.repositories.in_memory_step_repository import InMemoryStepRepository
 from src.interfaces.http.app_factory import create_app
@@ -86,12 +89,36 @@ def _create_client() -> Flask:
     return create_app(container=ApiContainerStub())
 
 
+def _build_settings(*, auth_enabled: bool, auth_key: str) -> Settings:
+    return Settings(
+        redis_url="redis://redis:6379/0",
+        queue_name="runs",
+        ai_provider="openai",
+        ai_model="gpt-5.4",
+        openai_api_key="test-key",
+        api_auth_enabled=auth_enabled,
+        api_auth_key=auth_key,
+        webhook_enabled=False,
+        webhook_timeout_sec=10,
+        webhook_max_retries=3,
+        webhook_retry_backoff_sec=1.0,
+        webhook_signing_secret="",
+        webhook_dead_letter_dir=Path("/tmp/artifacts/dead_letters"),
+        artifact_root=Path("/tmp/artifacts"),
+        planner_template_path=Path("/tmp/planner.txt"),
+        evaluator_template_path=Path("/tmp/evaluator.txt"),
+        flask_host="0.0.0.0",
+        flask_port=8000,
+    )
+
+
 def test_runs_api_baseline_flow() -> None:
     app = _create_client()
     client = app.test_client()
 
     create_response = client.post("/v1/runs", json=_build_payload())
     assert create_response.status_code == 202
+    assert create_response.headers.get("X-Request-Id")
     run_id = create_response.get_json()["run_id"]
 
     status_response = client.get(f"/v1/runs/{run_id}")
@@ -156,3 +183,22 @@ def test_runs_api_returns_503_when_ai_runtime_is_not_ready() -> None:
     assert response.get_json()["error"] == (
         "AI runtime is not configured. Set OPENAI_API_KEY to start runs."
     )
+
+
+def test_runs_api_requires_api_key_when_auth_enabled() -> None:
+    app = create_app(
+        container=ApiContainerStub(),
+        settings=_build_settings(auth_enabled=True, auth_key="shared-secret"),
+    )
+    client = app.test_client()
+
+    missing_key_response = client.post("/v1/runs", json=_build_payload())
+    assert missing_key_response.status_code == 401
+    assert missing_key_response.get_json() == {"error": "Unauthorized"}
+
+    success_response = client.post(
+        "/v1/runs",
+        json=_build_payload(),
+        headers={"X-API-Key": "shared-secret"},
+    )
+    assert success_response.status_code == 202
