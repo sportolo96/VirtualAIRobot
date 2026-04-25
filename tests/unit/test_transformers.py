@@ -8,7 +8,7 @@ from src.infrastructure.transformers.step_transformer import StepTransformer
 
 
 def test_run_transformer_roundtrip(run_factory) -> None:
-    run = run_factory()
+    run = run_factory(callbacks={"completion_url": "https://example.test/webhook"})
     now = datetime.now(tz=timezone.utc)
     run.mark_running(now=now)
     run.update_progress(now=now, current_step=2, last_action="wait", last_evaluation="in progress")
@@ -22,6 +22,7 @@ def test_run_transformer_roundtrip(run_factory) -> None:
     assert reconstructed.status.value == run.status.value
     assert reconstructed.current_step == 2
     assert reconstructed.final_evaluation == {"terminal_action": "done", "reason": "ok"}
+    assert reconstructed.callbacks == {"completion_url": "https://example.test/webhook"}
 
 
 def test_step_transformer_roundtrip(run_factory) -> None:
@@ -45,3 +46,14 @@ def test_step_transformer_roundtrip(run_factory) -> None:
     assert reconstructed.index == 3
     assert reconstructed.action["action"] == "click"
     assert reconstructed.created_at == created_at
+
+
+def test_run_transformer_defaults_callbacks_when_missing_in_record(run_factory) -> None:
+    run = run_factory()
+    transformer = RunTransformer()
+    record = transformer.to_record(run=run)
+    record.pop("callbacks", None)
+
+    reconstructed = transformer.from_record(record=record)
+
+    assert reconstructed.callbacks == {}

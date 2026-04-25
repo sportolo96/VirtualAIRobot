@@ -40,4 +40,35 @@ def test_create_run_handler_saves_and_enqueues() -> None:
 
     assert persisted is not None
     assert persisted.status.value == "queued"
+    assert persisted.callbacks == {}
     assert queue.enqueued == [run.run_id.value]
+
+
+def test_create_run_handler_persists_callbacks() -> None:
+    repository = InMemoryRunRepository()
+    queue = QueueSpy()
+    handler = CreateRunHandler(run_repository=repository, queue_client=queue)
+
+    command = CreateRunCommand(
+        goal="Open dashboard",
+        start_url="https://example.com/login",
+        success_criteria={
+            "type": "text_or_dom",
+            "must_include": ["Dashboard"],
+            "must_not_include": ["Error"],
+        },
+        runtime={"mode": "container_desktop", "viewport": {"width": 1080, "height": 1920}},
+        limits={"max_steps": 5, "time_budget_sec": 60, "max_retries_per_step": 1},
+        allowed_actions=["move", "click", "scroll", "type", "key", "wait", "done", "failed"],
+        llm={"planner_model": "gpt-5.4", "evaluator_model": "gpt-5.4"},
+        callbacks={
+            "completion_url": "https://example.test/webhook",
+            "headers": {"X-Webhook-Key": "abc"},
+        },
+    )
+
+    run = handler.handle(command=command)
+    persisted = repository.get(run.run_id)
+
+    assert persisted is not None
+    assert persisted.callbacks["completion_url"] == "https://example.test/webhook"

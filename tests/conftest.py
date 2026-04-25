@@ -56,6 +56,7 @@ def run_factory() -> Callable[..., Run]:
                 "llm", {"planner_model": "gpt-5.4", "evaluator_model": "gpt-5.4"}
             ),
             now=now,
+            callbacks=overrides.pop("callbacks", {}),
         )
 
     return _factory
