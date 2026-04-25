@@ -1,51 +1,64 @@
 # VirtualAIRobot - Implementation Plan
 
 ## Goal
-Build an API-first, queue-based AI/OS automation system where each step requires screenshot capture and AI evaluation, and the API returns full execution results and evaluation.
+Build a production-ready API-first AI/OS automation platform with Docker runtime, queue-based execution, secure API access, secure webhook flows, and multi-provider AI fallback.
 
 ## Core Principles
-- No `.md` scenario input: all run parameters come from API requests.
-- Asynchronous execution: `POST /v1/runs` only enqueues; processing happens in workers.
-- Screenshot capture is required before and after each step.
-- The next action is always derived from AI evaluation of the current screenshot context.
-- Docker-based containerized runtime is mandatory.
-- Delivery format is a Docker Compose stack (`api`, `worker`, `redis`).
-- The same containerized stack must run on both macOS and Linux hosts.
+- API-first operation: all runtime inputs come from HTTP API requests.
+- Async processing: `POST /v1/runs` enqueues, worker executes.
+- Mandatory step evidence: `pre`/`post` screenshots for every step.
+- Deterministic runtime model control: planner/evaluator model selection comes from env settings.
+- Security-first baseline: API auth with per-client key rotation + RBAC, webhook signature/timestamp/idempotency enforcement.
+- Container-only deployment model: Docker Compose (`api`, `worker`, `redis`) on macOS and Linux.
 
 ## Phases
 
-### F0 - Project Foundation and Container Runtime
-- Python project skeleton with DDD + CQRS layers.
-- Dockerfile + docker-compose (`api`, `worker`, `redis`) in mandatory use.
-- Flask API + RQ worker + Redis queue/state baseline implementation.
-- Runtime configuration switches (runtime mode, limits, AI provider, artifact storage).
+### F0 - Runtime Foundation (Completed)
+- Python codebase with DDD + CQRS layers.
+- Dockerfile and Docker Compose stack (`api`, `worker`, `redis`).
+- Flask API, RQ worker, Redis-backed queue and state.
+- Env-driven runtime configuration and Make-based operational commands.
 
-### F1 - Run Lifecycle and Queue
-- `Run` domain model and state machine (`queued`, `running`, `succeeded`, `failed`, `cancelled`, `timeout`).
-- Queue producer (`POST /v1/runs`) and worker consumer.
-- Status API (`GET /v1/runs/{run_id}`).
+### F1 - Run Lifecycle and Queue (Completed)
+- `Run` aggregate and lifecycle states: `queued`, `running`, `succeeded`, `failed`, `cancelled`, `timeout`.
+- Queue producer (`POST /v1/runs`) + worker consumer.
+- Run status endpoint (`GET /v1/runs/{run_id}`) and cancel endpoint (`POST /v1/runs/{run_id}/cancel`).
 
-### F2 - Iterative AI/OS Execution Cycle
-- Step loop: pre-capture -> plan -> execute -> post-capture -> evaluate.
-- LangChain best-practice orchestration: planner/evaluator prompt templates + LCEL pipelines.
-- Structured, validated LLM output (decision/evaluation DTOs).
-- Planner terminal action rule: `done` => success, `failed` => failure.
-- Allowed action set and guardrails.
-- Limits: `max_steps`, `time_budget_sec`, `max_retries_per_step`.
+### F2 - AI/OS Execution Loop (Completed)
+- Execution loop: pre-capture -> planner -> action -> post-capture -> evaluator.
+- LangChain template pipelines for planner/evaluator with structured outputs.
+- Allowed-action guardrails and runtime limits (`max_steps`, `time_budget_sec`, `max_retries_per_step`).
+- Terminal action policy: `done` => success, `failed` => failure.
 
-### F3 - Result and Evaluation
-- Detailed trace endpoint: `GET /v1/runs/{run_id}/steps`.
-- Final evaluation (goal reached / not reached + reasoning).
-- Artifact references (screenshots, logs).
+### F3 - Security Hardening (Completed)
+- API authentication supports:
+  - shared key mode (`API_AUTH_KEY`)
+  - per-client rotating keys + roles (`API_AUTH_CLIENTS_JSON`)
+- Endpoint-level RBAC (`runs.read`, `runs.write`).
+- Completion webhook sender includes retry + dead-letter handling.
+- Central webhook receiver enforcement:
+  - timestamp replay window
+  - signature policy
+  - idempotency deduplication (Redis NX+TTL)
 
-### F4 - Operations and Documentation
-- Finalize AGENTS and workflow rules.
-- Maintain documentation update flow.
-- GitLab delivery and CI/CD plan (later push and pipeline integration).
+### F4 - Multi-Provider AI Strategy (Completed)
+- Primary provider + ordered fallback chain:
+  - `openai`
+  - `azure_openai`
+- Provider routing via env:
+  - `AI_PROVIDER`
+  - `AI_FALLBACK_PROVIDERS`
+- Runtime model selection via env:
+  - `PLANNER_MODEL`
+  - `EVALUATOR_MODEL`
 
-## First Delivery Scope
-- 1 enqueue endpoint.
-- 1 status endpoint.
-- 1 steps endpoint.
-- 1 worker loop with mandatory screenshot + AI-eval cycle.
-- Docker Compose stack (`api` + `worker` + `redis`).
+### F5 - Documentation and Quality Gates (Completed)
+- README, system design, and deficiencies documentation aligned with runtime behavior.
+- Mock-only tests (no live AI/network), full unit/integration coverage for new flows.
+- Mandatory quality checks: `make test`, `make lint`, `make typecheck`, `make quality`.
+
+## Delivered Scope
+- API endpoints: run create/status/steps/cancel + webhook receiver endpoint.
+- Worker loop with mandatory screenshot evidence and AI evaluation.
+- Redis persistence for runs/steps and webhook idempotency.
+- Hardened auth, webhook enforcement, and multi-provider fallback runtime.

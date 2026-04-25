@@ -78,10 +78,6 @@ def _build_payload() -> dict:
             "max_retries_per_step": 1,
         },
         "allowed_actions": ["move", "click", "scroll", "type", "key", "wait", "done", "failed"],
-        "llm": {
-            "planner_model": "gpt-5.4",
-            "evaluator_model": "gpt-5.4",
-        },
     }
 
 
@@ -89,21 +85,33 @@ def _create_client() -> Flask:
     return create_app(container=ApiContainerStub())
 
 
-def _build_settings(*, auth_enabled: bool, auth_key: str) -> Settings:
+def _build_settings(*, auth_enabled: bool, auth_key: str, auth_clients_json: str = "") -> Settings:
     return Settings(
         redis_url="redis://redis:6379/0",
         queue_name="runs",
         ai_provider="openai",
+        ai_fallback_providers=(),
         ai_model="gpt-5.4",
+        planner_model="gpt-5.4",
+        evaluator_model="gpt-5.4",
         openai_api_key="test-key",
+        azure_openai_api_key="",
+        azure_openai_api_base_url="",
+        azure_openai_api_version="2024-10-21",
         api_auth_enabled=auth_enabled,
         api_auth_key=auth_key,
+        api_auth_clients_json=auth_clients_json,
         webhook_enabled=False,
         webhook_timeout_sec=10,
         webhook_max_retries=3,
         webhook_retry_backoff_sec=1.0,
         webhook_signing_secret="",
         webhook_dead_letter_dir=Path("/tmp/artifacts/dead_letters"),
+        webhook_receiver_enabled=False,
+        webhook_receiver_signing_secret="",
+        webhook_receiver_require_signature=True,
+        webhook_receiver_max_age_sec=300,
+        webhook_receiver_idempotency_ttl_sec=86400,
         artifact_root=Path("/tmp/artifacts"),
         planner_template_path=Path("/tmp/planner.txt"),
         evaluator_template_path=Path("/tmp/evaluator.txt"),
@@ -202,3 +210,42 @@ def test_runs_api_requires_api_key_when_auth_enabled() -> None:
         headers={"X-API-Key": "shared-secret"},
     )
     assert success_response.status_code == 202
+
+
+def test_runs_api_supports_client_registry_auth() -> None:
+    app = create_app(
+        container=ApiContainerStub(),
+        settings=_build_settings(
+            auth_enabled=True,
+            auth_key="",
+            auth_clients_json=(
+                '[{"client_id":"writer","roles":["runs.write","runs.read"],'
+                '"keys":[{"id":"w1","secret":"writer-secret","status":"active"}]}]'
+            ),
+        ),
+    )
+    client = app.test_client()
+
+    response = client.post("/v1/runs", json=_build_payload(), headers={"X-API-Key": "writer-secret"})
+
+    assert response.status_code == 202
+
+
+def test_runs_api_forbids_write_when_client_only_has_read_role() -> None:
+    app = create_app(
+        container=ApiContainerStub(),
+        settings=_build_settings(
+            auth_enabled=True,
+            auth_key="",
+            auth_clients_json=(
+                '[{"client_id":"reader","roles":["runs.read"],'
+                '"keys":[{"id":"r1","secret":"reader-secret","status":"active"}]}]'
+            ),
+        ),
+    )
+    client = app.test_client()
+
+    response = client.post("/v1/runs", json=_build_payload(), headers={"X-API-Key": "reader-secret"})
+
+    assert response.status_code == 403
+    assert response.get_json() == {"error": "Forbidden"}

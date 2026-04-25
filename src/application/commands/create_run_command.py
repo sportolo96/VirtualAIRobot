@@ -14,5 +14,4 @@ class CreateRunCommand:
     runtime: dict[str, Any]
     limits: dict[str, int]
     allowed_actions: list[str]
-    llm: dict[str, Any]
     callbacks: dict[str, Any] = field(default_factory=dict)

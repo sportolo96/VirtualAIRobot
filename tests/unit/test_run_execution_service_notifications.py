@@ -113,7 +113,6 @@ def test_run_execution_service_notifies_completion_on_done() -> None:
         runtime={"mode": "container_desktop", "viewport": {"width": 1080, "height": 1920}},
         limits=RunLimits(max_steps=5, time_budget_sec=60, max_retries_per_step=1),
         allowed_actions=["move", "click", "scroll", "type", "key", "wait", "done", "failed"],
-        llm={"planner_model": "gpt-5.4", "evaluator_model": "gpt-5.4"},
         now=datetime.now(tz=timezone.utc),
         callbacks={"completion_url": "https://example.test/webhook"},
     )

@@ -18,7 +18,9 @@ Key requirements:
 - Queue (Redis + RQ)
 - Worker Service (RQ worker)
 - Browser/OS Adapter layer
-- AI Planner/Evaluator orchestration (LangChain)
+- AI Planner/Evaluator orchestration (LangChain + multi-provider routing)
+- API auth registry (shared key + per-client key rotation + RBAC)
+- Webhook receiver security enforcement
 - Artifact Store (filesystem/object storage)
 
 ### 2.2 Layers (DDD + CQRS)
@@ -41,10 +43,11 @@ Key requirements:
 - Screenshot adapter captures real OS-level desktop screenshots into filesystem artifacts (`.png`) on each step.
 - Desktop session and browser window size are initialized from run `runtime.viewport`.
 - Screenshot output is normalized to the run viewport and includes cursor overlay markers.
-- Planner/Evaluator run through LangChain template + parser pipelines with live OpenAI Responses API calls.
-- Planner/Evaluator receive the same step screenshot image as OpenAI image input.
+- Planner/Evaluator run through LangChain template + parser pipelines with live Responses API calls.
+- Planner/Evaluator receive the same step screenshot image as provider image input.
 - Action execution uses OS-level input events via `xdotool` for supported non-terminal actions.
 - Optional completion webhook callback is emitted on terminal run status.
+- Optional webhook receiver endpoint enforces timestamp/signature/idempotency policy.
 
 ## 3. Run Lifecycle
 
@@ -61,13 +64,19 @@ Key requirements:
 - `GET /v1/runs/{run_id}`
 - `GET /v1/runs/{run_id}/steps`
 - `POST /v1/runs/{run_id}/cancel`
+- `POST /webhooks/run-completion`
 
 Run create precondition:
-- `POST /v1/runs` requires configured AI runtime (`AI_PROVIDER=openai` and `OPENAI_API_KEY`).
+- `POST /v1/runs` requires configured AI runtime (`AI_PROVIDER` with provider-specific credentials).
 - If AI runtime is missing or live connectivity check fails, API returns `503` and does not enqueue the run.
+- Planner/evaluator runtime models are selected from env (`PLANNER_MODEL`, `EVALUATOR_MODEL`).
 
 Endpoint auth precondition:
 - If `API_AUTH_ENABLED=true`, all `/v1/*` endpoints require `X-API-Key` header.
+- Auth sources: shared key (`API_AUTH_KEY`) or per-client registry (`API_AUTH_CLIENTS_JSON`).
+- Endpoint RBAC:
+  - `runs.read`: `GET /v1/runs/*`
+  - `runs.write`: `POST /v1/runs` and `POST /v1/runs/*/cancel`
 - `GET /health` remains unauthenticated for container health checks.
 
 ## 4. API Contract
@@ -92,10 +101,6 @@ Endpoint auth precondition:
     "max_retries_per_step": 2
   },
   "allowed_actions": ["move", "click", "scroll", "type", "key", "wait", "done", "failed"],
-  "llm": {
-    "planner_model": "gpt-5.4",
-    "evaluator_model": "gpt-5.4"
-  },
   "callbacks": {
     "completion_url": "https://example.test/webhook",
     "headers": {"X-Webhook-Key": "abc"}
@@ -196,6 +201,14 @@ Webhook receiver best practices:
 - Enforce replay window with `X-VAR-Timestamp` (for example 300 seconds max age).
 - Deduplicate using `X-VAR-Idempotency-Key` with persistent TTL cache.
 - Support secret rotation with dual-secret verification during migration.
+- Receiver reference guide: `docs/webhook-receiver-validation.md`.
+
+Webhook receiver endpoint:
+- `POST /webhooks/run-completion` is enforced by centralized runtime validator.
+- Enforcement covers:
+  - replay window (`WEBHOOK_RECEIVER_MAX_AGE_SEC`)
+  - signature policy (`WEBHOOK_RECEIVER_REQUIRE_SIGNATURE`, `WEBHOOK_RECEIVER_SIGNING_SECRET`)
+  - idempotency dedupe (`WEBHOOK_RECEIVER_IDEMPOTENCY_TTL_SEC`, Redis NX+TTL)
 
 ## 5. Execution Loop
 Mandatory step order:
@@ -235,9 +248,12 @@ The loop ends when:
 ### 7.3 Main Runtime Keys (plan)
 - `RUNTIME_MODE`
 - `QUEUE_BACKEND`
-- `AI_PROVIDER`, `AI_MODEL`, `OPENAI_API_KEY`
-- `API_AUTH_ENABLED`, `API_AUTH_KEY`
+- `AI_PROVIDER`, `AI_FALLBACK_PROVIDERS`, `AI_MODEL`
+- `PLANNER_MODEL`, `EVALUATOR_MODEL`
+- `OPENAI_API_KEY`, `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_API_BASE_URL`, `AZURE_OPENAI_API_VERSION`
+- `API_AUTH_ENABLED`, `API_AUTH_KEY`, `API_AUTH_CLIENTS_JSON`
 - `WEBHOOK_ENABLED`, `WEBHOOK_TIMEOUT_SEC`, `WEBHOOK_MAX_RETRIES`, `WEBHOOK_RETRY_BACKOFF_SEC`, `WEBHOOK_SIGNING_SECRET`, `WEBHOOK_DEAD_LETTER_DIR`
+- `WEBHOOK_RECEIVER_ENABLED`, `WEBHOOK_RECEIVER_SIGNING_SECRET`, `WEBHOOK_RECEIVER_REQUIRE_SIGNATURE`, `WEBHOOK_RECEIVER_MAX_AGE_SEC`, `WEBHOOK_RECEIVER_IDEMPOTENCY_TTL_SEC`
 - `DEFAULT_VIEWPORT_WIDTH`, `DEFAULT_VIEWPORT_HEIGHT`
 - `MAX_STEPS_DEFAULT`, `TIME_BUDGET_DEFAULT_SEC`
 - `ARTIFACT_RETENTION_DAYS`
@@ -253,8 +269,10 @@ The loop ends when:
 - Enforced allowlist of actions
 - URL allowlist/denylist support
 - Hard time budget and step limits
-- Shared API-key authentication for `/v1/*` endpoints (configurable)
+- API auth with shared key or per-client rotating keys
+- Endpoint-level RBAC for read/write run operations
+- Central webhook receiver enforcement for replay/signature/idempotency checks
 
 ## 10. Open Points
 - Artifact storage target: local volume vs object storage
-- Model fallback strategy across planner/evaluator roles
+- Provider failure strategy is sequential fallback; weighted routing/circuit-breaker policy is not implemented yet

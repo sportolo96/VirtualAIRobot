@@ -29,7 +29,6 @@ class CreateRunHandler:
                 max_retries_per_step=command.limits["max_retries_per_step"],
             ),
             allowed_actions=command.allowed_actions,
-            llm=command.llm,
             now=now,
             callbacks=command.callbacks,
         )

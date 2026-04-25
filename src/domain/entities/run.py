@@ -20,7 +20,6 @@ class Run:
     runtime: dict[str, Any]
     limits: RunLimits
     allowed_actions: list[str]
-    llm: dict[str, Any]
     callbacks: dict[str, Any]
     status: RunStatus
     goal_achieved: bool
@@ -44,7 +43,6 @@ class Run:
         runtime: dict[str, Any],
         limits: RunLimits,
         allowed_actions: list[str],
-        llm: dict[str, Any],
         now: datetime,
         callbacks: dict[str, Any] | None = None,
     ) -> Run:
@@ -56,7 +54,6 @@ class Run:
             runtime=runtime,
             limits=limits,
             allowed_actions=allowed_actions,
-            llm=llm,
             callbacks=callbacks or {},
             status=RunStatus.QUEUED,
             goal_achieved=False,

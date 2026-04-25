@@ -9,7 +9,7 @@ from langchain_core.runnables import RunnableLambda
 from pydantic import BaseModel, Field
 
 from src.application.ports.planner import Planner
-from src.infrastructure.ai.providers.openai_responses_client import OpenAIResponsesClient
+from src.infrastructure.ai.providers.responses_client import ResponsesClient
 
 
 class PlannerDecision(BaseModel):
@@ -31,7 +31,7 @@ class PlannerPipeline(Planner):
     def __init__(
         self,
         template_path: Path,
-        openai_client: OpenAIResponsesClient,
+        openai_client: ResponsesClient,
         default_model: str,
         model_invoke: Callable[[str, str], str] | None = None,
     ) -> None:

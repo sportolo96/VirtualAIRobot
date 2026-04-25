@@ -52,9 +52,6 @@ def run_factory() -> Callable[..., Run]:
                 "allowed_actions",
                 ["move", "click", "scroll", "type", "key", "wait", "done", "failed"],
             ),
-            llm=overrides.pop(
-                "llm", {"planner_model": "gpt-5.4", "evaluator_model": "gpt-5.4"}
-            ),
             now=now,
             callbacks=overrides.pop("callbacks", {}),
         )

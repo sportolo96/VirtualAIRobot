@@ -64,7 +64,6 @@ def create_runs_blueprint(container: RunsContainer) -> Blueprint:
             runtime=data.runtime.model_dump(),
             limits=data.limits.model_dump(),
             allowed_actions=data.allowed_actions,
-            llm=data.llm.model_dump(),
             callbacks=data.callbacks.model_dump(),
         )
         run = create_run_handler.handle(command=command)
