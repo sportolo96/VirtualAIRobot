@@ -13,11 +13,19 @@ Delivery from GitHub repository to GitLab and CI/CD preparation.
      - `make quality`
    - If no active feature branch exists, propose a branch name then create/switch.
    - If task is complete on active feature branch and mandatory checks pass, commit and push only after explicit user approval.
-3. Create CI pipeline file(s) (lint, test, build).
-4. Integrate Docker image build/publish steps.
-5. Document release checklist.
+3. After push, prepare pull request message package:
+   - Target branch: `main` (unless explicitly requested otherwise).
+   - PR text language: English.
+   - Required PR body sections:
+     - `## Summary`
+     - `## Validation`
+     - `## Notes`
+   - Provide a prefilled compare URL (`quick_pull=1`) and the plain PR text.
+4. Create CI pipeline file(s) (lint, test, build).
+5. Integrate Docker image build/publish steps.
+6. Document release checklist.
 
 ## Required Result
 - Reproducible build and test execution in CI.
 - Versioned and traceable deployment path.
-- Change sets delivered through feature-branch-based commit/push flow.
+- Change sets delivered through feature-branch-based commit/push flow with PR-ready English delivery package.
