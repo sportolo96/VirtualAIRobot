@@ -10,7 +10,7 @@ from langchain_core.runnables import RunnableLambda
 from pydantic import BaseModel, Field
 
 from src.application.ports.evaluator import Evaluator
-from src.infrastructure.ai.providers.openai_responses_client import OpenAIResponsesClient
+from src.infrastructure.ai.providers.responses_client import ResponsesClient
 
 
 class StepEvaluation(BaseModel):
@@ -28,7 +28,7 @@ class EvaluatorPipeline(Evaluator):
     def __init__(
         self,
         template_path: Path,
-        openai_client: OpenAIResponsesClient,
+        openai_client: ResponsesClient,
         default_model: str,
         model_invoke: Callable[[str, str], str] | None = None,
     ) -> None:

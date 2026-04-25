@@ -34,13 +34,6 @@ class LimitsSchema(BaseModel):
     max_retries_per_step: int = 2
 
 
-class LlmSchema(BaseModel):
-    """LLM schema."""
-
-    planner_model: str = "gpt-5.4"
-    evaluator_model: str = "gpt-5.4"
-
-
 class CallbacksSchema(BaseModel):
     """Callbacks schema."""
 
@@ -59,5 +52,4 @@ class CreateRunRequestSchema(BaseModel):
     allowed_actions: list[str] = Field(
         default_factory=lambda: ["move", "click", "scroll", "type", "key", "wait", "done", "failed"]
     )
-    llm: LlmSchema = Field(default_factory=LlmSchema)
     callbacks: CallbacksSchema = Field(default_factory=CallbacksSchema)

@@ -106,7 +106,6 @@ def test_run_execution_service_marks_success_and_writes_steps() -> None:
         runtime={"mode": "container_desktop", "viewport": {"width": 1080, "height": 1920}},
         limits=RunLimits(max_steps=5, time_budget_sec=60, max_retries_per_step=1),
         allowed_actions=["move", "click", "scroll", "type", "key", "wait", "done", "failed"],
-        llm={"planner_model": "gpt-5.4", "evaluator_model": "gpt-5.4"},
         now=datetime.now(tz=timezone.utc),
     )
     run_repository.save(run=run)
@@ -146,7 +145,6 @@ def test_run_execution_service_marks_failed_when_ai_requests_failed_action() -> 
         runtime={"mode": "container_desktop", "viewport": {"width": 1080, "height": 1920}},
         limits=RunLimits(max_steps=5, time_budget_sec=60, max_retries_per_step=1),
         allowed_actions=["move", "click", "scroll", "type", "key", "wait", "done", "failed"],
-        llm={"planner_model": "gpt-5.4", "evaluator_model": "gpt-5.4"},
         now=datetime.now(tz=timezone.utc),
     )
     run_repository.save(run=run)

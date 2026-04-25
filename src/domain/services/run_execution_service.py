@@ -97,7 +97,7 @@ class RunExecutionService:
                     step_index=step_index,
                     pre_screenshot=pre_screenshot,
                     last_evaluation=run.last_evaluation,
-                    model=str(run.llm.get("planner_model", "")) or None,
+                    model=None,
                 )
 
                 action_name = str(planner_decision.get("action", "wait"))
@@ -158,7 +158,7 @@ class RunExecutionService:
                     action=planner_decision,
                     action_result=action_result,
                     post_screenshot=post_screenshot,
-                    model=str(run.llm.get("evaluator_model", "")) or None,
+                    model=None,
                 )
 
                 step = Step(

@@ -12,6 +12,8 @@ class FakeSettings:
     queue_name: str = "runs"
     ai_provider: str = "openai"
     ai_model: str = "gpt-5.4"
+    planner_model: str = "gpt-5.4"
+    evaluator_model: str = "gpt-5.4"
     openai_api_key: str = "test-key"
     artifact_root: Path = Path("/tmp/artifacts")
     planner_template_path: Path = Path("/tmp/planner.txt")

@@ -20,8 +20,16 @@ Implementation of new features (API, queue, agent loop, runner, artifacts).
 14. No commit/push to `main`; feature branch is required.
 15. If no active feature branch exists, propose a branch name and create/switch to it.
 16. If work is complete on an active feature branch and mandatory checks pass, wait for explicit user approval before commit and push.
+17. After push, prepare pull request (MR) delivery:
+    - Generate a compare link with prefilled title/body (`quick_pull=1`) toward `main`.
+    - Keep PR title/body in English.
+    - Use a consistent body structure:
+      - `## Summary`
+      - `## Validation`
+      - `## Notes`
+18. Share the clickable PR link and the plain PR text in the same update so the user can open/submit immediately.
 
 ## Required Result
 - Reproducible run in Docker environment.
 - Traceable run state and step trace.
-- Cohesive change sets committed and pushed from feature branches.
+- Cohesive change sets committed and pushed from feature branches, with PR-ready English delivery text.
