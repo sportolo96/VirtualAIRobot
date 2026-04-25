@@ -1,7 +1,16 @@
 # VirtualAIRobot
+VirtualAIRobot is an AI-powered workflow automation system for goal-based OS and browser execution.
+It runs as a Dockerized API + worker architecture where you define a goal, and the system executes it step-by-step using AI planning and evaluation.
+The system interacts with real environments (browser + OS), stores each execution step, and captures screenshots for traceability and debugging.
 
-VirtualAIRobot is a Dockerized API + worker system for goal-based OS/browser automation.  
-You submit a goal, the worker executes step-by-step actions, and every step is stored with screenshots and evaluation.
+## Key capabilities
+- Multi-step AI planning and execution
+- Real OS-level interaction (mouse, keyboard, browser)
+- Queue-based async execution
+- Run tracking and observability
+
+## Example execution flow
+User → Goal → API → Planner → Actions → OS execution → Evaluation → Result
 
 ## What It Does
 - Runs asynchronous automation jobs through `api` + `worker` + `redis`.
@@ -9,6 +18,13 @@ You submit a goal, the worker executes step-by-step actions, and every step is s
 - Uses AI planner/evaluator pipelines to decide and evaluate next actions.
 - Executes allowed OS actions (`move`, `click`, `scroll`, `type`, `key`, `wait`) in container desktop runtime.
 - Returns run status, step trace, and terminal result (`done` -> `succeeded`, `failed` -> `failed`).
+
+## Architecture
+Client → API (Flask) → Queue (Redis/RQ) → Worker → AI Planner/Evaluator → OS Execution
+
+- API handles run lifecycle
+- Workers execute tasks asynchronously
+- AI decides next actions based on screenshots
 
 ## Services
 - `api`: Flask HTTP API
